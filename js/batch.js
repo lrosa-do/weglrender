@@ -94,7 +94,7 @@ const DARKCYAN = new Color(0.0, 0.55, 0.55, 1.0);
 const RAYWHITE = new Color(0.96, 0.96, 0.96, 1.0);
 
 
-
+//********************************************************************************************************************************************/
 
 class Shader
 {
@@ -111,129 +111,7 @@ class Shader
 
     }
  
-    static   CreateSolidShader()
-{
-    let VertexShaderSolid = `
-    precision mediump float;
-    attribute vec3 aPosition;
-    attribute vec4 aColor;
-    uniform mat4 uProjection;
-    uniform mat4 uView;
-    varying vec4 vColor;
-    void main()
-    {
-        gl_Position = uProjection * uView * vec4(aPosition, 1.0);
-        vColor = aColor;
-    }
-    `;
 
-    let FragmentShaderSolid = `
-    precision mediump float;
-    varying vec4 vColor;
-    void main()
-    {
-        gl_FragColor = vColor;
-    }
-    `;
-
-    let shader = new Shader();
-    shader.Load(VertexShaderSolid, FragmentShaderSolid);
-    shader.Use();
-    shader.AddUniform("uProjection");
-    shader.AddUniform("uView");
-    shader.UnSet();
-    return shader;
-
-    }
-
-    static  CreateTextureShader()
-    {
-        let VertexShaderSprite = `
-        precision mediump float;
-        attribute vec3 aPosition;
-        attribute vec2 aTexCoord;
-        attribute vec4 aColor;
-        uniform mat4 uProjection;
-        uniform mat4 uView;
-
-        varying vec2 vTexCoord;
-        varying vec4 vColor;
-
-        void main()
-            {
-                gl_Position = uProjection * uView * vec4(aPosition, 1.0);
-                vTexCoord = aTexCoord;
-                vColor = aColor;
-            }
-            `;
-
-        let FragmentShaderSprite = `
-        precision mediump float;
-        varying vec2 vTexCoord;
-        varying vec4 vColor;
-        uniform sampler2D uTexture;
-
-        void main()
-        {
-            gl_FragColor =  texture2D(uTexture, vTexCoord) * vColor;
-        }
-        `;
-
-        let shader = new Shader();
-        shader.Load(VertexShaderSprite, FragmentShaderSprite);
-        shader.AddUniform("uProjection");
-        shader.AddUniform("uView");
-        shader.AddUniform("uTexture");
-        shader.SetUniform1i("uTexture", 0);
-        shader.UnSet();
-        return shader;
-
-    }
-    static  CreateTextureNoColorShader()
-    {
-        let VertexShaderSprite = `
-        precision mediump float;
-        attribute vec3 aPosition;
-        attribute vec2 aTexCoord;
-  
-        uniform mat4 uProjection;
-        uniform mat4 uView;
-        uniform mat4 uModel;
-
-        varying vec2 vTexCoord;
-  
-
-        void main()
-            {
-                gl_Position = uProjection * uView * uModel * vec4(aPosition, 1.0);
-                vTexCoord = aTexCoord;
-      
-            }
-            `;
-
-        let FragmentShaderSprite = `
-        precision mediump float;
-        varying vec2 vTexCoord;
-
-        uniform sampler2D uTexture;
-
-        void main()
-        {
-            gl_FragColor =  texture2D(uTexture, vTexCoord) ;
-        }
-        `;
-
-        let shader = new Shader();
-        shader.Load(VertexShaderSprite, FragmentShaderSprite);
-        shader.AddUniform("uProjection");
-        shader.AddUniform("uView");
-        shader.AddUniform("uModel");
-        shader.AddUniform("uTexture");
-        shader.SetUniform1i("uTexture", 0);
-        shader.UnSet();
-        return shader;
-
-    }
 
     Load( vertexShaderSource, fragmentShaderSource)
     {
@@ -378,8 +256,9 @@ const TRIANGLES                      = 0x0004;
 const TRIANGLE_STRIP                 = 0x0005;
 const TRIANGLE_FAN                   = 0x0006;
 
+//********************************************************************************************************************************************/
 
-class PolyBatch
+class Batch 
 {
     constructor(maxVertex)
     {
@@ -406,12 +285,6 @@ class PolyBatch
         gl.deleteVertexArray(this.VAO);
     }
 
-    Reset()
-    {
-     
-
-    }
-
     Init()
     {
       
@@ -422,7 +295,6 @@ class PolyBatch
         
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, this.vertices, gl.DYNAMIC_DRAW);
- 
      
 
         gl.enableVertexAttribArray(0);
@@ -432,10 +304,6 @@ class PolyBatch
 
 
         gl.bindVertexArray(null);
-
-
-
-
 
     }
     Vertex3f(x, y, z)
@@ -452,6 +320,8 @@ class PolyBatch
         if ( this.vertexCount >= this.totalAlloc ) 
         {
 
+            this.indexCount = 0;
+            this.vertexCount = 0;
             throw "Vertex buffer overflow with " +this.vertexCount + "  max  " + this.totalAlloc;
         }
 
@@ -463,24 +333,458 @@ class PolyBatch
     {
         this.Vertex3f(x, y, 0.5);
     }
-    Color4f(r, g, b, a)
+    Clear()
+    {
+
+        this.vertices.fill(0);
+              
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, this.vertices, gl.DYNAMIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      
+
+        this.indexCount = 0;
+        this.vertexCount = 0;
+    }
+   
+    SetColor4f(r, g, b, a)
     {
         this.colorr = r;
         this.colorg = g;
         this.colorb = b;
         this.colora = a;
     }
-    Color3f(r, g, b)
+    SetColor3f(r, g, b)
     {
         this.colorr = r;
         this.colorg = g;
         this.colorb = b;
+    }
+    SetColor(color)
+    {
+        this.colorr = color.r;
+        this.colorg = color.g;
+        this.colorb = color.b;
+        this.colora = color.a;
     }
 
     Render()
     {
        this.Flush();   
     }
+
+    Flush()
+    {
+        this.indexCount = 0;
+        this.vertexCount = 0;
+    }
+}
+//********************************************************************************************************************************************/
+class LineBatch extends Batch
+{
+    constructor(maxVertex)
+    {
+        super(maxVertex);
+    }
+    Flush()
+    {
+     
+        if (this.indexCount === 0) return;
+
+        Renderer.SetSolidRender();
+
+        Renderer.EnableBlend(true);
+
+       
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+        gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.vertices.subarray(0, this.indexCount));
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      
+
+
+
+
+        let count =this.vertexCount;
+
+   
+        gl.bindVertexArray(this.VAO);
+ 
+        Renderer.DrawArrays(LINES, 0, count);
+
+        gl.bindVertexArray(null);
+
+        super.Flush();
+       
+    }
+   
+    Line(x1, y1, x2, y2)
+    {
+      
+        this.Vertex2f(x1, y1);
+        this.Vertex2f(x2, y2);
+    }
+
+   
+    CircleSector(x, y, radius, startAngle, endAngle,  segments)
+    {
+        if (radius <= 0.0) radius = 0.1;
+        if (endAngle < startAngle)
+        {
+            let tmp = startAngle;
+            startAngle = endAngle;
+            endAngle = tmp;
+        }
+
+        let minSegments = Math.ceil((endAngle - startAngle)/90);
+
+        if (segments < minSegments)
+        {
+            let th = Math.acos(2*Math.pow(1 - 0.5/radius, 2) - 1);
+            segments = Math.ceil(2*Math.PI/th);
+            if (segments <= 0) segments = minSegments;
+        }
+
+        let stepLength = (endAngle - startAngle)/segments;
+        let angle = startAngle;
+        let showCapLines = false;
+
+  
+        
+        if (showCapLines)
+        {
+        this.Vertex2f(x, y);
+        this.Vertex2f(x + Math.sin(DEG2RAD*angle)*radius, y + Math.cos(DEG2RAD*angle)*radius);
+        }
+
+        for (let i = 0; i < segments; i++)
+        {
+            this.Vertex2f(x + Math.sin(DEG2RAD*angle)*radius, y + Math.cos(DEG2RAD*angle)*radius);
+            this.Vertex2f(x + Math.sin(DEG2RAD*(angle + stepLength))*radius, y + Math.cos(DEG2RAD*(angle + stepLength))*radius);
+                
+            angle += stepLength;
+        }
+        if(showCapLines)
+        {
+        this.Vertex2f(x, y);
+        this.Vertex2f(x + Math.sin(DEG2RAD*angle)*radius, y + Math.cos(DEG2RAD*angle)*radius);
+        }
+    
+    }
+
+    Circle(x, y, radius)
+    {
+        this.CircleSector(x, y, radius, 0, 360, 18);
+
+    }
+    Ring(x, y, innerRadius, outerRadius, startAngle, endAngle,  segments)
+    {
+        if (startAngle == endAngle) return;
+
+        if (outerRadius < innerRadius)
+        {
+            let tmp = outerRadius;
+            outerRadius = innerRadius;
+            innerRadius = tmp;
+
+            if (outerRadius <= 0.0) outerRadius = 0.1;
+        }
+
+        if (endAngle < startAngle)
+        {
+            let tmp = startAngle;
+            startAngle = endAngle;
+            endAngle = tmp;
+        }
+
+        let minSegments = Math.ceil((endAngle - startAngle)/90);
+
+        if (segments < minSegments)
+        {
+            let th = Math.acos(2*Math.pow(1 - 0.5/outerRadius, 2) - 1);
+            segments = Math.ceil(2*Math.PI/th);
+            if (segments <= 0) segments = minSegments;
+        }
+
+        if (innerRadius <= 0.0)
+        {
+            this.CircleSector(x, y, outerRadius, startAngle, endAngle, segments);
+            return;
+        }
+
+        let stepLength = (endAngle - startAngle)/segments;
+        let angle = startAngle;
+        let showCapLines = true;
+
+     
+        if (showCapLines)
+        {
+            this.Vertex2f(x + Math.sin(DEG2RAD*angle)*outerRadius, y + Math.cos(DEG2RAD*angle)*outerRadius);
+            this.Vertex2f(x + Math.sin(DEG2RAD*angle)*innerRadius, y + Math.cos(DEG2RAD*angle)*innerRadius);
+        }
+
+        for (let i = 0; i < segments; i++)
+        {
+            this.Vertex2f(x + Math.sin(DEG2RAD*angle)*outerRadius, y + Math.cos(DEG2RAD*angle)*outerRadius);
+            this.Vertex2f(x + Math.sin(DEG2RAD*(angle + stepLength))*outerRadius, y + Math.cos(DEG2RAD*(angle + stepLength))*outerRadius);
+
+            this.Vertex2f(x + Math.sin(DEG2RAD*angle)*innerRadius, y + Math.cos(DEG2RAD*angle)*innerRadius);
+            this.Vertex2f(x + Math.sin(DEG2RAD*(angle + stepLength))*innerRadius, y + Math.cos(DEG2RAD*(angle + stepLength))*innerRadius);
+
+            angle += stepLength;
+        }
+
+        if (showCapLines)
+        {
+            this.Vertex2f(x + Math.sin(DEG2RAD*angle)*outerRadius, y + Math.cos(DEG2RAD*angle)*outerRadius);
+            this.Vertex2f(x + Math.sin(DEG2RAD*angle)*innerRadius, y + Math.cos(DEG2RAD*angle)*innerRadius);
+        }
+
+    }
+
+
+    Ellipse(x, y, width, height)
+    {
+
+        let segments = 36;
+        let stepLength = 360/segments;
+        let angle = 0;
+        for (let i = 0; i < segments; i++)
+        {
+            this.Vertex2f(x + Math.sin(DEG2RAD*angle)*width, y + Math.cos(DEG2RAD*angle)*height);
+            this.Vertex2f(x + Math.sin(DEG2RAD*(angle + stepLength))*width, y + Math.cos(DEG2RAD*(angle + stepLength))*height);
+            angle += stepLength;
+        }       
+    }
+    RectangleFromTo(x, y,x2,y2)
+    {
+
+        this.Vertex2f(x, y);
+        this.Vertex2f(x2, y);
+        this.Vertex2f(x2, y);
+        this.Vertex2f(x2, y2);
+        this.Vertex2f(x2, y2);
+        this.Vertex2f(x, y2);
+        this.Vertex2f(x, y2);
+        this.Vertex2f(x, y);
+    }
+    Rectangle(x, y,width,height)
+    {
+ 
+        this.Vertex2f(x, y);
+        this.Vertex2f(x + width, y);
+        this.Vertex2f(x + width, y);
+        this.Vertex2f(x + width, y + height);
+        this.Vertex2f(x + width, y + height);
+        this.Vertex2f(x, y + height);
+        this.Vertex2f(x, y + height);
+        this.Vertex2f(x, y);
+    }
+   
+
+}
+
+//********************************************************************************************************************************************/
+
+class FillBatch extends Batch
+{
+    constructor(maxVertex)
+    {
+        super(maxVertex);
+   
+    }
+   
+
+    Flush()
+    {
+     
+        if (this.indexCount === 0) return;
+        Renderer.SetSolidRender();
+        Renderer.EnableBlend(true);
+      
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+        gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.vertices.subarray(0, this.indexCount));
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      
+        let count =this.vertexCount;
+
+   
+        gl.bindVertexArray(this.VAO);
+ 
+        Renderer.DrawArrays(TRIANGLES, 0, count);
+
+        gl.bindVertexArray(null);
+
+        super.Flush();
+       
+    }
+    
+
+    RotateRectangle(x, y, w, h, pivot_x, pivot_y,rotation)
+    {
+        let cosRotation = Math.cos(rotation*DEG2RAD);
+        let sinRotation = Math.sin(rotation*DEG2RAD);
+
+
+        let dx = -pivot_x * w;
+        let dy = -pivot_y * h;
+
+        let topLeftX = x + dx * cosRotation - dy * sinRotation;
+        let topLeftY = y + dx * sinRotation + dy * cosRotation;
+
+        let topRightX = x + (dx + w) * cosRotation - dy * sinRotation;
+        let topRightY = y + (dx + w) * sinRotation + dy * cosRotation;
+
+        let bottomLeftX = x + dx * cosRotation - (dy + h) * sinRotation;
+        let bottomLeftY = y + dx * sinRotation + (dy + h) * cosRotation;
+
+        let bottomRightX = x + (dx + w) * cosRotation - (dy + h) * sinRotation;
+        let bottomRightY = y + (dx + w) * sinRotation + (dy + h) * cosRotation;
+
+
+
+        
+        this.Vertex2f(topLeftX, topLeftY);
+        this.Vertex2f(topRightX, topRightY);
+        this.Vertex2f(bottomRightX, bottomRightY);
+
+        this.Vertex2f(bottomRightX, bottomRightY);
+        this.Vertex2f(bottomLeftX, bottomLeftY);
+        this.Vertex2f(topLeftX, topLeftY);
+
+        
+    }
+    CircleSector(x, y, radius, startAngle, endAngle,  segments)
+    {
+            
+   
+            if (radius <= 0.0) radius = 0.1;
+            if (endAngle < startAngle)
+            {
+                let tmp = startAngle;
+                startAngle = endAngle;
+                endAngle = tmp;
+            }
+    
+            let minSegments = Math.ceil((endAngle - startAngle)/90);
+    
+            if (segments < minSegments)
+            {
+                let th = Math.acos(2*Math.pow(1 - 0.5/radius, 2) - 1);
+                segments = Math.ceil(2*Math.PI/th);
+                if (segments <= 0) segments = minSegments;
+            }
+    
+            let stepLength = (endAngle - startAngle)/segments;
+            let angle = startAngle;
+           
+    
+            for (let i = 0; i < segments; i++)
+            {
+                this.Vertex2f(x, y);
+                this.Vertex2f(x + Math.sin(DEG2RAD*angle)*radius, y + Math.cos(DEG2RAD*angle)*radius);
+                this.Vertex2f(x + Math.sin(DEG2RAD*(angle + stepLength))*radius, y + Math.cos(DEG2RAD*(angle + stepLength))*radius);
+                    
+                angle += stepLength;
+            }
+    
+
+    }
+    Circle(x, y, radius)    
+    {
+        this.CircleSector(x, y, radius, 0, 360, 28);
+    }
+
+
+    Ring(x, y, innerRadius, outerRadius, startAngle, endAngle,  segments)
+    {
+        if (startAngle == endAngle) return;
+
+        if (outerRadius < innerRadius)
+        {
+            let tmp = outerRadius;
+            outerRadius = innerRadius;
+            innerRadius = tmp;
+
+            if (outerRadius <= 0.0) outerRadius = 0.1;
+        }
+
+        if (endAngle < startAngle)
+        {
+            let tmp = startAngle;
+            startAngle = endAngle;
+            endAngle = tmp;
+        }
+
+        let minSegments = Math.ceil((endAngle - startAngle)/90);
+
+        if (segments < minSegments)
+        {
+            let th = Math.acos(2*Math.pow(1 - 0.5/outerRadius, 2) - 1);
+            segments = Math.ceil(2*Math.PI/th);
+            if (segments <= 0) segments = minSegments;
+        }
+
+        if (innerRadius <= 0.0)
+        {
+            this.CircleSector(x, y, outerRadius, startAngle, endAngle, segments);
+            return;
+        }
+
+        let stepLength = (endAngle - startAngle)/segments;
+        let angle = startAngle;
+
+        for (let i = 0; i < segments; i++)
+        {
+            this.Vertex2f(x + Math.sin(DEG2RAD*angle)*outerRadius, y + Math.cos(DEG2RAD*angle)*outerRadius);
+            this.Vertex2f(x + Math.sin(DEG2RAD*(angle + stepLength))*outerRadius, y + Math.cos(DEG2RAD*(angle + stepLength))*outerRadius);
+            this.Vertex2f(x + Math.sin(DEG2RAD*angle)*innerRadius, y + Math.cos(DEG2RAD*angle)*innerRadius);
+
+            this.Vertex2f(x + Math.sin(DEG2RAD*(angle + stepLength))*outerRadius, y + Math.cos(DEG2RAD*(angle + stepLength))*outerRadius);
+            this.Vertex2f(x + Math.sin(DEG2RAD*(angle + stepLength))*innerRadius, y + Math.cos(DEG2RAD*(angle + stepLength))*innerRadius);
+            this.Vertex2f(x + Math.sin(DEG2RAD*angle)*innerRadius, y + Math.cos(DEG2RAD*angle)*innerRadius);
+
+            angle += stepLength;
+        }
+
+
+
+    }
+
+
+    Rectangle(x, y,width,height)
+    {
+      
+        this.Vertex2f(x, y);
+        this.Vertex2f(x + width, y);
+        this.Vertex2f(x + width, y + height);
+        this.Vertex2f(x + width, y + height);
+        this.Vertex2f(x, y + height);
+        this.Vertex2f(x, y);
+    }
+    RectangleFromTo(x, y,x2,y2)
+    {
+
+        this.Vertex2f(x, y);
+        this.Vertex2f(x2, y);
+        this.Vertex2f(x2, y2);
+        this.Vertex2f(x2, y2);
+        this.Vertex2f(x, y2);
+        this.Vertex2f(x, y);
+    }
+
+}
+//********************************************************************************************************************************************/
+
+
+class PolyBatch extends Batch
+{
+    constructor(maxVertex)
+    {
+        super(maxVertex);
+        this.mode = -1;
+  
+    }
+   
 
     Flush()
     {
@@ -511,32 +815,9 @@ class PolyBatch
 
         this.indexCount = 0;
         this.vertexCount = 0;
-
-
-     //   console.log( "Vertex buffer overflow with " + this.indexCount+" vtx " +this.vertexCount + "  max  " + this.totalAlloc);
-    
-    //     const error = gl.getError();
-    //    if (error !== gl.NO_ERROR) 
-    //    {
-    //     console.log( "Vertex buffer overflow" + this.indexCount + " "+this.vertexCount +" "+ this.totalAlloc);
-    //       // console.error("Erro WebGL:", error);       
-    //    }
-
        
     }
-    Clear()
-    {
-
-        this.vertices.fill(0);
-              
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, this.vertices, gl.DYNAMIC_DRAW);
-        gl.bindBuffer(gl.ARRAY_BUFFER, null);
-      
-
-        this.indexCount = 0;
-        this.vertexCount = 0;
-    }
+   
     SetMode(mode)
     {
         if (this.mode !== mode)
@@ -545,27 +826,6 @@ class PolyBatch
         }
      
         this.mode = mode;
-    }
-
-    SetColor4f(r, g, b, a)
-    {
-        this.colorr = r;
-        this.colorg = g;
-        this.colorb = b;
-        this.colora = a;
-    }
-    SetColor3f(r, g, b)
-    {
-        this.colorr = r;
-        this.colorg = g;
-        this.colorb = b;
-    }
-    SetColor(color)
-    {
-        this.colorr = color.r;
-        this.colorg = color.g;
-        this.colorb = color.b;
-        this.colora = color.a;
     }
     Line(x1, y1, x2, y2)
     {
@@ -821,12 +1081,7 @@ class PolyBatch
             angle += stepLength;
         }
 
-
-
     }
-
-
-
 
 
     DrawEllipseLine(x, y, width, height)
@@ -888,6 +1143,8 @@ class PolyBatch
         this.Vertex2f(x, y2);
         this.Vertex2f(x, y);
     }
+    ///just for testing
+    
     DrawTrianglesStrip(points)
     {
         this.SetMode(TRIANGLE_STRIP);
@@ -944,9 +1201,9 @@ class PolyBatch
             this.Vertex2f(points[i].x, points[i].y);
         }
     }
+
 }
-
-
+//********************************************************************************************************************************************/
 const Allign =
 {
     Left  : 0,
@@ -956,7 +1213,7 @@ const Allign =
     Top   : 4,
     
 };
-
+//********************************************************************************************************************************************/
 class SpriteBatch 
 {
     static  FIX_ARTIFACTS_BY_STRECHING_TEXEL = true;
@@ -2098,7 +2355,7 @@ class SpriteBatch
 }
 
 
-
+//********************************************************************************************************************************************/
 class PolySprite 
 {
     static VBOVERTEX=2;
@@ -2464,7 +2721,7 @@ class PolySprite
     }
 }
 
-
+//********************************************************************************************************************************************/
 class SpriteTerrain 
 {
     constructor()
@@ -2712,7 +2969,7 @@ class SpriteTerrain
    
 
 }
-
+//********************************************************************************************************************************************/
 class SpriteCloud 
 {
     static VBOVERTEX=2;
@@ -3119,7 +3376,7 @@ class SpriteCloud
   
 }
 
-
+//********************************************************************************************************************************************/
 class TileLayer 
 {
     imageWidth = 0;
@@ -3234,7 +3491,7 @@ class TileLayer
 
 }
 
-
+//********************************************************************************************************************************************/
 class CharacterInfo 
 {
     constructor() 

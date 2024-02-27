@@ -354,7 +354,7 @@ class Assets
     static async LoadTexture(name, src)
     {
        // await Assets.Delay(Assets.DefaultDelay);
-        return new Promise((resolve) => 
+        return new Promise((resolve,reject) => 
         {
                     
 

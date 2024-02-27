@@ -10,7 +10,8 @@ if (!gl)
 {
     console.log("O WebGL não está disponível, seu navegador pode não suportar.");
 }
-
+var stats=new Stats();
+document.body.appendChild(stats.dom);
 
 let CurrentTime, ElapsedTime, PreviousTime = Date.now(), LagTime = 0;
 let FPS = 60;          // Frames per second
@@ -22,7 +23,7 @@ let CurrentFPS = 0;
 let UpdateTimeFPS = Date.now();
 
 const pixelRatio = window.devicePixelRatio || 1;
-canvas.width  = pixelRatio * window.innerWidth;
+canvas.width  = pixelRatio * window.innerWidth ;
 canvas.height = pixelRatio * window.innerHeight;
 
 
@@ -32,157 +33,99 @@ var height = canvas.height;
 
 
 
-const main = async () => 
+
+console.log("main");
+
+
+Renderer.Init(width, height);
+Renderer.SetClearColor(0.1, 0.1, 0.1);
+Renderer.SetViewPort(0, 0, width, height);
+Renderer.SetOrthoProjection(0, width, height, 0, -10, 10);
+let camera = Mat4.GetMatrix2D(width/2,height/2,1,1,0,width/2,height/2);
+Renderer.SetViewMatrix(camera);
+
+
+Assets.Init();
+Input.Init();
+Gui.Init();
+
+
+
+let total = 20000 / 4;
+let lines   = new LineBatch(2192);
+let fill    = new FillBatch(2192);
+let spriteRender  = new SpriteBatch(total);
+let fontRender    = new SpriteBatch(500);
+let font= new Font();   
+
+Assets.AddTexture("wabbit", "assets/wabbit_alpha.png");
+Assets.AddTexture("atlas", "assets/minion_sprite.png");
+Assets.AddTexture("background", "assets/backgroundDesert.png");
+Assets.AddTexture("dirt", "assets/dirt.png");
+Assets.AddTexture("lama", "assets/lama.png");
+Assets.AddTexture("tiles", "assets/wall.png");
+
+async function Load()
 {
-    console.log("main");
-    
-    
-    Renderer.Init(width, height);
-    Renderer.Clear(0, 0, 0, 1);
-    Renderer.SetViewPort(0, 0, width, height);
-
-    Renderer.SetOrthoProjection(0, width, height, 0, -10, 10);
-    let camera = Mat4.GetMatrix2D(width/2,height/2,1,1,0,width/2,height/2);
-    Renderer.SetViewMatrix(camera);
-
-
-    Assets.Init();
-    Input.Init();
-    ImediateRenderer.Init();
-
-
-
-    let total = 70000 / 4;
-
-    let scollX = 0;
- 
-
-    let linesRender   = new PolyBatch(8192);
-    let fillRender    = new PolyBatch(8192);
-    let spriteRender  = new SpriteBatch(total);
-    let fontRender    = new SpriteBatch(500);
- 
-
-    
-
-
-    let font= new Font();   
-    await font.Create(defaultFontImage, defaultFontData).then(() =>
-    {
-      
-      
-     
-    });
-
-
-
-
-
-    Assets.OnLoad = function(filename)
-    {
-     
-
-    };
-
-    Assets.OnComplete = function()
-    {
-
-       
-    }
-
-    Assets.OnProgress = function(filename, progress, total)
-    {
-        Renderer.Clear(0, 0, 0, 1);
-      
-
-        
-
-        linesRender.SetColor(GRAY);
-        linesRender.DrawRectangle(10, 40, canvas.width-20, 40);
-        linesRender.SetColor(GREEN);
-        linesRender.DrawRectangle(10, 40, (canvas.width-20) * (progress/total), 40);
-
-        linesRender.Render();
-
-    
-
-
-        font.Print(spriteRender,10, 40,16, "Carregando: "+ filename +" Progresso: " + Math.floor((progress/total)*100) +"%");
-   
-    
-       spriteRender.Render();
-      
-
-
-
-
-
-
-        console.log("Load:  "+filename+" Progresso: " + Math.floor((progress/total)*100) +"%");
-    };
-
-
-
-    Assets.AddTexture("wabbit", "assets/wabbit_alpha.png");
-    Assets.AddTexture("atlas", "assets/minion_sprite.png");
-    Assets.AddTexture("background", "assets/backgroundDesert.png");
-    Assets.AddTexture("dirt", "assets/dirt.png");
-    Assets.AddTexture("lama", "assets/lama.png");
-    Assets.AddTexture("tiles", "assets/wall.png");
-    
+    await font.Create(defaultFontImage, defaultFontData);
     await Assets.LoadAll();
+}
 
-    Gui.Init();
+
+
+
+Assets.OnLoad = function(filename)
+{
+    
+
+};
+
+Assets.OnComplete = function()
+{
+
+    
+}
+
+Assets.OnProgress = function(filename, progress, total)
+{
+    Renderer.Clear();
+    
+
+    
+
+    fill.SetColor(GRAY);
+    fill.Rectangle(10, 40, canvas.width-20, 40);
+    fill.SetColor(GREEN);
+    fill.Rectangle(10, 40, (canvas.width-20) * (progress/total), 40);
+
+    fill.Render();
+
+
+
+
+    font.Print(spriteRender,10, 40,16, "Carregando: "+ filename +" Progresso: " + Math.floor((progress/total)*100) +"%");
+
+
+    spriteRender.Render();
+    
+
+
+
+
+
+
+    console.log("Load:  "+filename+" Progresso: " + Math.floor((progress/total)*100) +"%");
+};
+
+
 
 
     
-    // await Assets.LoadTexture("wabbit", "assets/wabbit_alpha.png");
-    // await Assets.LoadTexture("atlas", "assets/minion_sprite.png");
-
-    // await Assets.LoadImage("player", "assets/player.png");
-    // await Assets.LoadImage("enemy", "assets/enemy.png");
-    // await Assets.LoadImage("bullet", "assets/bullet.png");
-    // await Assets.LoadAudio("shoot", "assets/shoot.wav");
-    // await Assets.LoadAudio("explosion", "assets/explosion.wav");
-    // await Assets.LoadAudio("background", "assets/background.mp3");
-
-    console.log("Assets loaded");
 
 
-    let w = 200;
-    let h = 200;
-    let x =width/2 - w/2;
-    let y =height/2 - h/2;
 
-    const vertices = [
-        // Vertex 1
-        x, y, 0,  // Position
-        0, 0,  // UV
-        1.0,1.0,1.0,1.0, // Color
 
-        // Vertex 2
-        x + w, y, 0,  // Position
-        1, 0, // UV
-        1.0,1.0,1.0,1.0, // Color
 
-        // Vertex 3
-        x + w, y + h, 0, // Position
-        1, 1,  // UV
-        1.0,1.0,1.0,1.0, // Color
-
-        // Vertex 4
-        x, y + h, 0,  // Position
-        0, 1,  // UV
-        1.0,1.0,1.0,1.0, // Color
-    ];
-
-    const indices = [0, 1, 2, 2, 3, 0];
-    let quadArray = new VertexArray();
-    quadArray.Begin();
-    let quadBuffer = new VertexBuffer( vertices, vertices.length  , [POSIION3D,TEXTURE,COLOR4]);
-    let quadIndexBuffer = new IndexBuffer(indices);
-    quadArray.End();
-  
 
     let innerRadius = 80.0;
     let outerRadius = 190.0;
@@ -195,94 +138,124 @@ const main = async () =>
     let gValue = 0;
     let bValue = 0;
     let inputText = {text:"Input", selected:false};
+    let isToggle = false;
+
+    let labels = 
+    [
+        {caption:"Radio1",state:false},
+        {caption:"Radio2",state:false},
+        {caption:"Radio3",state:true},
+        {caption:"Radio4",state:false},
+        {caption:"Radio5",state:false},
+        {caption:"Radio6",state:false},
+        {caption:"Radio7",state:false},
+        {caption:"Radio8",state:false},
+        
+        
+    ];
+
+    let checkBox =
+    [
+        {caption:"Check1",state:false},
+        {caption:"Check2",state:false},
+        {caption:"Check3",state:true},
+        {caption:"Check4",state:false},
+        {caption:"Check5",state:false},
+        {caption:"Check6",state:false},
+        {caption:"Check7",state:false},
+        {caption:"Check8",state:false},
+        
+        
+    ];
+        
 
 
-
-
+    function Process()
+    {
+    
+     
+    }
 
     function Update(dt)
     {
-       
-      
-
-     
-
-        scollX += 20 * dt;
+        
     }
 
 
     function Render()
     {
       
-        Renderer.Clear(0.6, 0.6, 0.6, 1.0, 1);
-       
-
+         Renderer.Clear();
+      
        
 
    
 
-       //    DrawRingLines(x, y, innerRadius, outerRadius, startAngle, endAngle,  segments)ºº
-
-       
       
 
         spriteRender.SetColor(BLUE);
-        spriteRender.Draw(Assets.GetTexture("wabbit"), 100, 400, 100,100);
+      //  spriteRender.Draw(Assets.GetTexture("wabbit"), 100, 400, 100,100);
 
-        // fillRender.SetColor(LIGHTGRAY);
-        // fillRender.DrawRectangle(1100, 30, 320, 600);
+        // fill.SetColor(LIGHTGRAY);
+        // fill.Rectangle(1100, 30, 320, 600);
+
+        Gui.Begin(1000,100,650,550,{bar:true,background:true,dragging:true,title:"Config" });
+
+        //RadioGroup RadioGroup(x, y, w, h, rows, cols, labels)
+     
+        Gui.RadioGroup(210, 260, 20, 20,5,  4, labels,true, "Radio Group");
+
+        Gui.CheckBoxGroup(200, 350, 20, 20,5,  4,    checkBox  ,true, "Check Box Group");
         
-        Gui.Panel(1100, 30, 320, 600)
+       // Gui.Panel(0, 0, 250, 500)
 
-        innerRadius = Gui.Slider(1200, 40, 120, 20,"InnerRadius","", 0, 100, innerRadius);
-        outerRadius = Gui.Slider(1200, 80, 120, 20,"OuterRadius","", 0, 200, outerRadius);
-        segments = Gui.Slider(1200, 120, 120, 20,"Segments","", 0, 100, segments);
+        innerRadius = Gui.Slider(100, 40, 120, 20,"InnerRadius","", 0, 100, innerRadius);
+        outerRadius = Gui.Slider(100, 80, 120, 20,"OuterRadius","", 0, 200, outerRadius);
+        segments = Gui.Slider(100, 120, 120, 20,"Segments","", 0, 100, segments);
 
-        startAngle = Gui.Slider(1200, 160, 120, 20,"StartAngle","", 0, 360, startAngle);
-        endAngle = Gui.Slider(1200, 200, 120, 20,"EndAngle", "",0, 360, endAngle);
+        startAngle = Gui.Slider(100, 160, 120, 20,"StartAngle","", 0, 360, startAngle);
+        endAngle = Gui.Slider(100, 200, 120, 20,"EndAngle", "",0, 360, endAngle);
 
-        rValue = Gui.VerticalSlider(1330, 260, 20, 100, "R","", 0, 1, rValue);
-        gValue = Gui.VerticalSlider(1355, 260, 20, 100, "G","", 0, 1, gValue);
-        bValue = Gui.VerticalSlider(1380, 260, 20, 100, "B","", 0, 1, bValue);
+        rValue = Gui.VerticalSlider(30, 330, 20, 100, "R","", 0, 1, rValue);
+        gValue = Gui.VerticalSlider(55, 330, 20, 100, "G","", 0, 1, gValue);
+        bValue = Gui.VerticalSlider(80, 330, 20, 100, "B","", 0, 1, bValue);
         
 
-        drawRing = Gui.CheckBox(1200, 280, 20, 20,"DrawRing", drawRing);
+         drawRing = Gui.CheckBox(180, 450, 20, 20,"DrawRing", drawRing);
 
-        if (Gui.Button(1200, 360, 120, 40, "Draw"))
+        if (Gui.Button(50, 450, 120, 40, "Draw"))
         {
             console.log("pressed");
             progress +=0.1;
             if (progress > 1) progress = 0;
         }
 
-        Gui.ProgressBar(1200, 420, 120, 20, null,1, progress);
+        isToggle=Gui.Radio(290,460, 20,25, "Toggle", isToggle);
 
-        if (Gui.InputText(1200, 460, 120, 20,inputText))
+         Gui.ProgressBar(50, 230, 120, 20, null,1, progress);
+
+        if (Gui.InputText(50, 270, 120, 20,inputText))
         {
             console.log("inputText"+inputText.text);
         }
+        Gui.End();
 
         
-        fillRender.SetColor4f(rValue, gValue, bValue, 0.8);
-        fillRender.DrawRing(600, 200, innerRadius, outerRadius, startAngle, endAngle, segments);
+         fill.SetColor4f(rValue, gValue, bValue, 0.8);
+         fill.Ring(600, 200, innerRadius, outerRadius, startAngle, endAngle, segments);
 
-        linesRender.SetColor(RED);
-        linesRender.DrawRingLines(600, 400,innerRadius, outerRadius, startAngle, endAngle, segments);
+          lines.SetColor(RED);
+          lines.Ring(600, 400,innerRadius, outerRadius, startAngle, endAngle, segments);
 
 
         spriteRender.Render();   
-        fillRender.Render();
-        linesRender.Render();
+
+
+        fill.Render();
+        lines.Render();
          
  
 
-       // ImediateRenderer.DrawRectangle(40, 100, 100, 100);
-  
-
-
-        quadArray.Begin();
-       // Renderer.DrawElements(TRIANGLES, 6,  0);
-        quadArray.End();
        
         Gui.Render();
  
@@ -293,20 +266,16 @@ const main = async () =>
         font.SetColor(LIME);
         font.SetSize(22);
         font.SetAllignment("left");
-        font.Print(fontRender,20, 20, "FPS: "+CurrentFPS );
-        font.Print(fontRender,20, 40, "textures: "+Renderer.numTextures + " Draws " + Renderer.numDrawCalls );
-        font.Print(fontRender,20, 60, "Programs: "+Renderer.numPrograms + " Vertices: " + Renderer.numVertex + " Triangles: " + Renderer.numTriangles);
+        font.Print(fontRender,20, 120, "FPS: "+Int(CurrentFPS ));
+        font.Print(fontRender,20, 140, "textures: "+Int(Renderer.numTextures) + " Draws " + Int(Renderer.numDrawCalls));
+        font.Print(fontRender,20, 160, "Programs: "+Int(Renderer.numPrograms) + " Vertices: " + Int(Renderer.numVertex) + " Triangles: " + Int(Renderer.numTriangles));
        
 
    
        
-        fontRender.Render();
+         fontRender.Render();
 
   
-
-
-
-
 
       
         
@@ -316,18 +285,17 @@ const main = async () =>
     }
 
 
+
+
     function GameLoop () 
     {
-        window.requestAnimationFrame(function () 
-        {
-            GameLoop();
-        });
+    
 
         Renderer.ResetStats();    
         CurrentTime = Date.now();
         ElapsedTime = (CurrentTime - PreviousTime)/1000;
         PreviousTime = CurrentTime;
-        LagTime += ElapsedTime;
+        LagTime += (ElapsedTime * 1000);
         FrameCounter++;
 
         Renderer.elapsedTime = CurrentTime;
@@ -335,80 +303,67 @@ const main = async () =>
        
   
            
-   
+        Update(ElapsedTime);
     
-        // while (LagTime >= MPF) 
-        // {
-        //     LagTime -= MPF;
-        //     Process();
-        // }
-        
-        Update(ElapsedTime/100);
+        while (LagTime >= MPF) 
+        {
+            LagTime -= MPF;
+ 
+            Process();
+        }
+
+        Render();
+      
 
         
-        Render();
+       
         Input.Update();
         if (CurrentTime - UpdateTimeFPS > 1000) 
         {
             CurrentFPS = FrameCounter;
             FrameCounter = 0;
-    
+          //  window.document.title = "FPS: " + CurrentFPS;
             UpdateTimeFPS = Date.now();
         }
 
     };
 
 
-GameLoop();
 
 
-    window.onresize = function()
-    {
-        console.log("resize");
-        let width  =  window.innerWidth;
-        let height =  window.innerHeight;
-        //Renderer.SetViewPort(0, 0, width, height);
-       // Renderer.SetOrthoProjection(0, width, height, 0, -10, 10);
-
-      //  let camera = Mat4.GetMatrix2D(width/2,height/2,1,1,0,width/2,height/2);
-      //  Renderer.SetViewMatrix(camera);
-
-    }
 
 
-};
+window.onresize = function()
+{
+    console.log("resize");
+    let width  =  window.innerWidth;
+    let height =  window.innerHeight;
+    //Renderer.SetViewPort(0, 0, width, height);
+   // Renderer.SetOrthoProjection(0, width, height, 0, -10, 10);
 
+  //  let camera = Mat4.GetMatrix2D(width/2,height/2,1,1,0,width/2,height/2);
+  //  Renderer.SetViewMatrix(camera);
 
+}
 
 window.onload = function()
 {
     console.log("onload");
-    main();
+    Load().then(() =>
+    {
+        console.log("Start Game");
+        Game();
+    });
+
 };
 
-/*
-private function apply (fit:Bool, sourceWidth:Float,  sourceHeight:Float,  targetWidth:Float,  targetHeight:Float):Point
-	{
-	//	fit
-	if (fit)
-	{
-			var targetRatio:Float = targetHeight / targetWidth;
-			var sourceRatio:Float = sourceHeight / sourceWidth;
-			var scale:Float = targetRatio > sourceRatio ? targetWidth / sourceWidth : targetHeight / sourceHeight;
-			return new Point(sourceWidth * scale, sourceHeight * scale);
-	} else
-	{
-		
-	//	fill
-		var targetRatio:Float = targetHeight / targetWidth;
-
-			var sourceRatio:Float = sourceHeight / sourceWidth;
-
-			var scale:Float = targetRatio < sourceRatio ? targetWidth / sourceWidth : targetHeight / sourceHeight;
-
-			return new Point(sourceWidth * scale, sourceHeight * scale);
 
 
-	}
-	}
-*/
+
+function Game()
+{
+    GameLoop();
+    stats.update();
+    requestAnimationFrame(Game);
+}
+

@@ -67,10 +67,11 @@ class Renderer
         this.projectionMatrix = new Mat4();  
         this.worldMatrix = new Mat4();
         this.solidShader = null;
-        this.solidShader   = Shader.CreateSolidShader();
-        this.textureShader = Shader.CreateTextureShader();
+        this.solidShader   = CreateSolidShader();
+        this.textureShader = CreateTextureShader();
         this.deltaTime = 0;
         this.elapsedTime = 0;
+        this.clearColor = new Color(0, 0, 0, 1);
 
             this.shaders = {};
             this.filters = {};
@@ -199,6 +200,10 @@ class Renderer
             {
                 shader.SetUniformMatrix4fv("uView", this.viewMatrix.m);
             }
+            if (shader.ContainsUniform("uWorld"))
+            {
+                shader.SetUniformMatrix4fv("uWorld", this.worldMatrix.m);
+            }
             if (shader.ContainsUniform("uTexture"))
             {
                 shader.SetUniform1i("uTexture", 0);
@@ -250,14 +255,15 @@ class Renderer
         this.numVertex += count;
     }
 
-    static SetClearColor(r, g, b, a)
+    static SetClearColor(r, g, b)
     {
-        gl.clearColor(r, g, b, a);
+        this.clearColor.Set(r, g, b, 1);
+        gl.clearColor(r, g, b, 1);
     }
 
     static EnableScissor(enable)
     {
-        if(this.enableScissor != enable)
+      //  if(this.enableScissor != enable)
         {
             if(enable)
             {
@@ -380,9 +386,9 @@ class Renderer
         }
     }
 
-    static Clear(r=0, g=0, b = 0.0)
+    static Clear()
     {
-        gl.clearColor(r,g,b, 1);
+      //  gl.clearColor(r,g,b, 1);
         gl.clear(gl.COLOR_BUFFER_BIT);
     }
 
@@ -673,6 +679,7 @@ class ImediateRenderer
         gl.bindVertexArray(null);
 
     }
+   
 
 }
 

@@ -1,6 +1,129 @@
 
 "use strict";
 
+function   CreateSolidShader()
+{
+    let VertexShaderSolid = `
+    precision mediump float;
+    attribute vec3 aPosition;
+    attribute vec4 aColor;
+    uniform mat4 uProjection;
+    uniform mat4 uView;
+    varying vec4 vColor;
+    void main()
+    {
+        gl_Position = uProjection * uView * vec4(aPosition, 1.0);
+        vColor = aColor;
+    }
+    `;
+
+    let FragmentShaderSolid = `
+    precision mediump float;
+    varying vec4 vColor;
+    void main()
+    {
+        gl_FragColor = vColor;
+    }
+    `;
+
+    let shader = new Shader();
+    shader.Load(VertexShaderSolid, FragmentShaderSolid);
+    shader.Use();
+    shader.AddUniform("uProjection");
+    shader.AddUniform("uView");
+    shader.UnSet();
+    return shader;
+
+    }
+
+    function  CreateTextureShader()
+    {
+        let VertexShaderSprite = `
+        precision mediump float;
+        attribute vec3 aPosition;
+        attribute vec2 aTexCoord;
+        attribute vec4 aColor;
+        uniform mat4 uProjection;
+        uniform mat4 uView;
+
+        varying vec2 vTexCoord;
+        varying vec4 vColor;
+
+        void main()
+            {
+                gl_Position = uProjection * uView * vec4(aPosition, 1.0);
+                vTexCoord = aTexCoord;
+                vColor = aColor;
+            }
+            `;
+
+        let FragmentShaderSprite = `
+        precision mediump float;
+        varying vec2 vTexCoord;
+        varying vec4 vColor;
+        uniform sampler2D uTexture;
+
+        void main()
+        {
+            gl_FragColor =  texture2D(uTexture, vTexCoord) * vColor;
+        }
+        `;
+
+        let shader = new Shader();
+        shader.Load(VertexShaderSprite, FragmentShaderSprite);
+        shader.AddUniform("uProjection");
+        shader.AddUniform("uView");
+        shader.AddUniform("uTexture");
+        shader.SetUniform1i("uTexture", 0);
+        shader.UnSet();
+        return shader;
+
+    }
+    function  CreateTextureNoColorShader()
+    {
+        let VertexShaderSprite = `
+        precision mediump float;
+        attribute vec3 aPosition;
+        attribute vec2 aTexCoord;
+  
+        uniform mat4 uProjection;
+        uniform mat4 uView;
+        uniform mat4 uModel;
+
+        varying vec2 vTexCoord;
+  
+
+        void main()
+            {
+                gl_Position = uProjection * uView * uModel * vec4(aPosition, 1.0);
+                vTexCoord = aTexCoord;
+      
+            }
+            `;
+
+        let FragmentShaderSprite = `
+        precision mediump float;
+        varying vec2 vTexCoord;
+
+        uniform sampler2D uTexture;
+
+        void main()
+        {
+            gl_FragColor =  texture2D(uTexture, vTexCoord) ;
+        }
+        `;
+
+        let shader = new Shader();
+        shader.Load(VertexShaderSprite, FragmentShaderSprite);
+        shader.AddUniform("uProjection");
+        shader.AddUniform("uView");
+        shader.AddUniform("uModel");
+        shader.AddUniform("uTexture");
+        shader.SetUniform1i("uTexture", 0);
+        shader.UnSet();
+        return shader;
+
+    }
 function CreateScreenShader()
 {
     let VertexShaderScreen = ` 

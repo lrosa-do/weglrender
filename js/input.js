@@ -243,7 +243,7 @@ class Input
         Mouse.DeltaX = (x - rect.left) * scaleX - Mouse.X;
         Mouse.DeltaY = (y - rect.top) * scaleY - Mouse.Y;
         Mouse.X = (x - rect.left) * scaleX;
-        Mouse.Y = (y - rect.top) * scaleY; 
+        Mouse.Y = (y - rect.top) * scaleY;
         Input.currentButtonState[0] = false;
         for (let i = 0; i < event.changedTouches.length; i++)
         {
