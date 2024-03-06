@@ -52,13 +52,13 @@ const main = async () =>
     console.log("main");
     
     
-    Renderer.Init(width, height);
-    Renderer.SetClearColor(0.1, 0.1, 0.1);
-    Renderer.SetViewPort(0, 0, width, height);
+    Core.Init(width, height);
+    Core.SetClearColor(0.1, 0.1, 0.1);
+    Core.SetViewPort(0, 0, width, height);
 
-    Renderer.SetOrthoProjection(0, width, height, 0, -10, 10);
+    Core.SetOrthoProjection(0, width, height, 0, -10, 10);
     let camera = Mat4.GetMatrix2D(width/2,height/2,1,1,0,width/2,height/2);
-    Renderer.SetViewMatrix(camera);
+    Core.SetViewMatrix(camera);
 
 
     Assets.Init();
@@ -107,7 +107,7 @@ const main = async () =>
 
     Assets.OnProgress = function(filename, progress, total)
      {
-    //     Renderer.Clear(0, 0, 0, 1);
+    //     Core.Clear(0, 0, 0, 1);
       
 
         
@@ -224,7 +224,7 @@ const main = async () =>
     function Render()
     {
       
-    //   Renderer.Clear();
+    //   Core.Clear();
        gl.clear(gl.COLOR_BUFFER_BIT);
        
 
@@ -292,7 +292,7 @@ const main = async () =>
 
 
         // quadArray.Begin();
-        // Renderer.DrawElements(TRIANGLES, 6,  0);
+        // Core.DrawElements(TRIANGLES, 6,  0);
         // quadArray.End();
        
       //  Gui.Render();
@@ -305,8 +305,8 @@ const main = async () =>
         // font.SetSize(22);
         // font.SetAllignment("left");
         // font.Print(fontRender,20, 20, "FPS: "+CurrentFPS );
-        // font.Print(fontRender,20, 40, "textures: "+Renderer.numTextures + " Draws " + Renderer.numDrawCalls );
-        // font.Print(fontRender,20, 60, "Programs: "+Renderer.numPrograms + " Vertices: " + Renderer.numVertex + " Triangles: " + Renderer.numTriangles);
+        // font.Print(fontRender,20, 40, "textures: "+Core.numTextures + " Draws " + Core.numDrawCalls );
+        // font.Print(fontRender,20, 60, "Programs: "+Core.numPrograms + " Vertices: " + Core.numVertex + " Triangles: " + Core.numTriangles);
        
 
    
@@ -334,15 +334,15 @@ const main = async () =>
             GameLoop();
         });
 
-        Renderer.ResetStats();    
+        Core.ResetStats();    
         CurrentTime = Date.now();
         ElapsedTime = (CurrentTime - PreviousTime)/1000;
         PreviousTime = CurrentTime;
         LagTime += ElapsedTime;
         FrameCounter++;
 
-        Renderer.elapsedTime = CurrentTime;
-        Renderer.deltaTime = ElapsedTime;
+        Core.elapsedTime = CurrentTime;
+        Core.deltaTime = ElapsedTime;
        
   
            
@@ -378,11 +378,11 @@ GameLoop();
         console.log("resize");
         let width  =  window.innerWidth;
         let height =  window.innerHeight;
-        //Renderer.SetViewPort(0, 0, width, height);
-       // Renderer.SetOrthoProjection(0, width, height, 0, -10, 10);
+        //Core.SetViewPort(0, 0, width, height);
+       // Core.SetOrthoProjection(0, width, height, 0, -10, 10);
 
       //  let camera = Mat4.GetMatrix2D(width/2,height/2,1,1,0,width/2,height/2);
-      //  Renderer.SetViewMatrix(camera);
+      //  Core.SetViewMatrix(camera);
 
     }
 

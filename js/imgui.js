@@ -11,7 +11,7 @@ class Gui
         this.line   = new LineBatch(count);
         this.fill    = new FillBatch(count);
         this.sprites = new SpriteBatch(count);
-        this.font = Renderer.defaultFont;
+        this.font = Core.defaultFont;
    
         this.ID = 0;
         this.FocusId = 0;
@@ -78,8 +78,8 @@ class Gui
         this.SetCursor("default");
         this.ID++;
 
-       // Renderer.EnableScissor(true);
-       // Renderer.SetScissor(X, Y, WIDTH, HEIGHT);
+       // Core.EnableScissor(true);
+       // Core.SetScissor(X, Y, WIDTH, HEIGHT);
      
         this.fill.SetColor(WHITE);
         this.line.SetColor(WHITE);
@@ -110,8 +110,11 @@ class Gui
         let WIDTH = this.window.width;
         let HEIGHT = this.window.height;
 
-        Renderer.EnableScissor(true);
-        Renderer.SetScissor(X, Y-barHeight, WIDTH, HEIGHT);
+      //  Core.EnableScissor(true);
+       // Core.SetScissor(X, Y-barHeight, WIDTH, HEIGHT);
+        this.line.SetClip(X, Y-barHeight, WIDTH, HEIGHT);
+        this.fill.SetClip(X, Y-barHeight, WIDTH, HEIGHT);
+        this.sprites.SetClip(X, Y-barHeight, WIDTH, HEIGHT);
  
 
         
@@ -211,7 +214,7 @@ class Gui
     {
         this.isBegin = false;
         this.Render();
-        Renderer.EnableScissor(false);
+        Core.EnableScissor(false);
     }
 
 
@@ -731,6 +734,11 @@ class Gui
         if (this.FocusId !== this.ID-1)
         {
             selected = false;
+          
+           // text = campoTexto.value;
+           // campoTexto.blur();
+            
+
         }
     
 
@@ -739,7 +747,9 @@ class Gui
             this.SetCursor("text");
             if (Input.IsMousePressed(0))
             {
-                selected = true;               
+                selected = true;   
+               // campoTexto.focus();    
+               // campoTexto.value = text;        
                         
             }
         }
@@ -747,10 +757,16 @@ class Gui
         if (Input.IsMousePressed(0) &&  !isOver &&  selected)
         {
             selected = false;
+        //     if (isMobile())
+        //     {
+        //    // text =  campoTexto.value;
+        //     campoTexto.blur();
+        //     }
         }
   
         this.fill.SetColor(this.theme.backgroundColor);
         this.fill.Rectangle(X, Y, WIDTH, HEIGHT);
+        let clip = this.sprites.GetClip();
         if (selected)
         {
             this.line.SetColor(this.theme.fontOverColor);
@@ -772,6 +788,9 @@ class Gui
     
         }
         let cursorX = X + this.font.GetTextWidth(text) + 2;
+        if (cursorX > X + WIDTH - 2) cursorX = X + WIDTH - 2;
+
+       
 
         if (selected && Input.IsAnyKeyPressed())
         {
@@ -801,6 +820,8 @@ class Gui
            
             
         }
+
+        this.sprites.SetClip(X, Y, WIDTH, HEIGHT);
         
         let offY = Y +(HEIGHT * 0.5) - (this.font.GetMaxHeight() * 0.5);
         this.font.SetAllignment("left");
@@ -814,6 +835,8 @@ class Gui
             Date.now() % 1000 > 500 ? this.fill.SetColor(this.theme.editCursorColor) : this.fill.SetColor(this.theme.backgroundColor);
             this.line.Line(cursorX, Y+2, cursorX, Y+HEIGHT-2) ;
         }
+
+        this.sprites.SetClip(clip.x, clip.y, clip.width, clip.height);
 
         obj.text = text;
         obj.selected = selected;

@@ -12,6 +12,11 @@ const RAD2DEG = 180.0 / Math.PI;
 function RAD(d) { return -d*PI/180.0;}
 function DEG(r) { return -r*180.0/PI;}
 
+function isMobile() 
+{
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
 function Rand()
 {
 	return Math.floor(65536 * Math.random());
@@ -286,6 +291,31 @@ function CircleInRect(x,y,r,rx,ry,rw,rh)
 	else if (y>ry+rh) testY=ry+rh;
 	return Distance(x,y,testX,testY)<r;
 }	
+
+const INSIDE = 0; // 0000
+const LEFT = 1;   // 0001
+const RIGHT = 2;  // 0010
+const BOTTOM = 4; // 0100
+const TOP = 8;    // 1000
+
+function computeOutCode(x, y,xmin,ymin,xmax,ymax)
+{
+	let code = INSIDE;
+
+
+
+	if (x < xmin)
+		code |= LEFT;
+	else if (x > xmax)
+		code |= RIGHT;
+
+	if (y < ymin)
+		code |= BOTTOM;
+	else if (y > ymax)
+		code |= TOP;
+
+	return code;
+}
 
 
 

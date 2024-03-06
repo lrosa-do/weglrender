@@ -152,12 +152,12 @@ class Shader
     Use()
     {
         if (this.program === null) return;
-        Renderer.SetProgram(this.program);
+        Core.SetProgram(this.program);
     }
 
     UnSet()
     {
-        Renderer.SetProgram(null);
+        Core.SetProgram(null);
 
     }
 
@@ -276,6 +276,8 @@ class Batch
         this.colorb=1.0;
         this.colora=1.0;
         this.mode = -1;
+        this.clip = new Rectangle(0, 0, Core.GetWidth(), Core.GetHeight());
+        this.useClip = false;
         this.Init();
    
     }
@@ -306,9 +308,32 @@ class Batch
         gl.bindVertexArray(null);
 
     }
+
+    PointInView(x, y)
+    {
+        if (this.useClip)
+        {
+            return this.clip.contains(x, y);
+        }
+        return true;
+    }
+    SetClip(x, y, width, height)
+    {
+        this.clip.set(x, y, width, height);
+        this.useClip = true;
+    }
+    DisableClip()
+    {
+        this.useClip = false;
+    }
+    EnableClip()
+    {
+        this.useClip = true;
+    }
     Vertex3f(x, y, z)
     {
-       
+      
+     
         this.vertices[this.indexCount++] = x;
         this.vertices[this.indexCount++] = y;
         this.vertices[this.indexCount++] = z;
@@ -326,9 +351,8 @@ class Batch
         }
 
         this.vertexCount++;
-        
-       
     }
+
     Vertex2f(x, y)
     {
         this.Vertex3f(x, y, 0.5);
@@ -385,15 +409,16 @@ class LineBatch extends Batch
     constructor(maxVertex)
     {
         super(maxVertex);
+        this.showCapLines = false;
     }
     Flush()
     {
      
         if (this.indexCount === 0) return;
 
-        Renderer.SetSolidRender();
+        Core.SetSolidRender();
 
-        Renderer.EnableBlend(true);
+        Core.EnableBlend(true);
 
        
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
@@ -409,7 +434,7 @@ class LineBatch extends Batch
    
         gl.bindVertexArray(this.VAO);
  
-        Renderer.DrawArrays(LINES, 0, count);
+        Core.DrawArrays(LINES, 0, count);
 
         gl.bindVertexArray(null);
 
@@ -417,11 +442,87 @@ class LineBatch extends Batch
        
     }
    
-    Line(x1, y1, x2, y2)
+    Line(x0, y0, x1, y1)
     {
-      
-        this.Vertex2f(x1, y1);
-        this.Vertex2f(x2, y2);
+       
+
+            if (this.useClip)
+            {
+                
+                let xmin = this.clip.x;	
+                let xmax = this.clip.x + this.clip.width;
+                let ymin = this.clip.y;
+                let ymax = this.clip.y + this.clip.height;
+
+                let t0 = 0;
+                let t1 = 1;
+
+                let dx = x1 - x0;
+                let dy = y1 - y0;
+
+                let accept = true;
+
+                if (dx !== 0) 
+                {
+                    let tMin = (xmin - x0) / dx;
+                    let tMax = (xmax - x0) / dx;
+
+                    if (tMin > tMax) 
+                    {
+                        let temp = tMin;
+                        tMin = tMax;
+                        tMax = temp;
+                    }
+
+                    if (tMin > t0) t0 = tMin;
+                    if (tMax < t1) t1 = tMax;
+
+                    if (t0 > t1) accept = false;
+                } else if (x0 < xmin || x0 > xmax)
+                 {
+                    accept = false;
+                }
+
+                if (accept && dy !== 0) 
+                {
+                    let tMin = (ymin - y0) / dy;
+                    let tMax = (ymax - y0) / dy;
+
+                    if (tMin > tMax) 
+                    {
+                        let temp = tMin;
+                        tMin = tMax;
+                        tMax = temp;
+                    }
+
+                    if (tMin > t0) t0 = tMin;
+                    if (tMax < t1) t1 = tMax;
+
+                    if (t0 > t1) accept = false;
+                } else if (y0 < ymin || y0 > ymax) 
+                {
+                    accept = false;
+                }
+
+                if (accept) 
+                {
+                    let x0Clip = x0 + t0 * dx;
+                    let y0Clip = y0 + t0 * dy;
+                    let x1Clip = x0 + t1 * dx;
+                    let y1Clip = y0 + t1 * dy;
+
+                    this.Vertex2f(x0Clip, y0Clip);
+                    this.Vertex2f(x1Clip, y1Clip);
+                }
+
+         
+        } else 
+        {
+            this.Vertex2f(x0, y0);
+            this.Vertex2f(x1, y1);
+        }           
+
+       
     }
 
    
@@ -446,27 +547,23 @@ class LineBatch extends Batch
 
         let stepLength = (endAngle - startAngle)/segments;
         let angle = startAngle;
-        let showCapLines = false;
+       
 
   
         
-        if (showCapLines)
+        if (this.showCapLines)
         {
-        this.Vertex2f(x, y);
-        this.Vertex2f(x + Math.sin(DEG2RAD*angle)*radius, y + Math.cos(DEG2RAD*angle)*radius);
+        this.Line(x, y, x + Math.sin(DEG2RAD*angle)*radius, y + Math.cos(DEG2RAD*angle)*radius);
         }
 
         for (let i = 0; i < segments; i++)
         {
-            this.Vertex2f(x + Math.sin(DEG2RAD*angle)*radius, y + Math.cos(DEG2RAD*angle)*radius);
-            this.Vertex2f(x + Math.sin(DEG2RAD*(angle + stepLength))*radius, y + Math.cos(DEG2RAD*(angle + stepLength))*radius);
-                
+            this.Line(x + Math.sin(DEG2RAD*angle)*radius, y + Math.cos(DEG2RAD*angle)*radius, x + Math.sin(DEG2RAD*(angle + stepLength))*radius, y + Math.cos(DEG2RAD*(angle + stepLength))*radius);
             angle += stepLength;
         }
-        if(showCapLines)
+        if(this.showCapLines)
         {
-        this.Vertex2f(x, y);
-        this.Vertex2f(x + Math.sin(DEG2RAD*angle)*radius, y + Math.cos(DEG2RAD*angle)*radius);
+           this.Line(x, y, x + Math.sin(DEG2RAD*angle)*radius, y + Math.cos(DEG2RAD*angle)*radius);
         }
     
     }
@@ -513,30 +610,34 @@ class LineBatch extends Batch
 
         let stepLength = (endAngle - startAngle)/segments;
         let angle = startAngle;
-        let showCapLines = true;
+
 
      
-        if (showCapLines)
+        if (this.showCapLines)
         {
-            this.Vertex2f(x + Math.sin(DEG2RAD*angle)*outerRadius, y + Math.cos(DEG2RAD*angle)*outerRadius);
-            this.Vertex2f(x + Math.sin(DEG2RAD*angle)*innerRadius, y + Math.cos(DEG2RAD*angle)*innerRadius);
+      
+            this.Line(x + Math.sin(DEG2RAD*angle)*outerRadius, y + Math.cos(DEG2RAD*angle)*outerRadius, x + Math.sin(DEG2RAD*angle)*innerRadius, y + Math.cos(DEG2RAD*angle)*innerRadius);
         }
 
         for (let i = 0; i < segments; i++)
         {
-            this.Vertex2f(x + Math.sin(DEG2RAD*angle)*outerRadius, y + Math.cos(DEG2RAD*angle)*outerRadius);
-            this.Vertex2f(x + Math.sin(DEG2RAD*(angle + stepLength))*outerRadius, y + Math.cos(DEG2RAD*(angle + stepLength))*outerRadius);
+        
+            this.Line(x + Math.sin(DEG2RAD*angle)*outerRadius, y + Math.cos(DEG2RAD*angle)*outerRadius, 
+                      x + Math.sin(DEG2RAD*(angle + stepLength))*outerRadius, y + Math.cos(DEG2RAD*(angle + stepLength))*outerRadius);
 
-            this.Vertex2f(x + Math.sin(DEG2RAD*angle)*innerRadius, y + Math.cos(DEG2RAD*angle)*innerRadius);
-            this.Vertex2f(x + Math.sin(DEG2RAD*(angle + stepLength))*innerRadius, y + Math.cos(DEG2RAD*(angle + stepLength))*innerRadius);
+        
+            this.Line(x + Math.sin(DEG2RAD*angle)*innerRadius, y + Math.cos(DEG2RAD*angle)*innerRadius,
+                      x + Math.sin(DEG2RAD*(angle + stepLength))*innerRadius, y + Math.cos(DEG2RAD*(angle + stepLength))*innerRadius);
 
             angle += stepLength;
         }
 
-        if (showCapLines)
+        if (this.showCapLines)
         {
-            this.Vertex2f(x + Math.sin(DEG2RAD*angle)*outerRadius, y + Math.cos(DEG2RAD*angle)*outerRadius);
-            this.Vertex2f(x + Math.sin(DEG2RAD*angle)*innerRadius, y + Math.cos(DEG2RAD*angle)*innerRadius);
+
+            this.Line(x + Math.sin(DEG2RAD*angle)*outerRadius, y + Math.cos(DEG2RAD*angle)*outerRadius, 
+                      x + Math.sin(DEG2RAD*angle)*innerRadius, y + Math.cos(DEG2RAD*angle)*innerRadius);
+
         }
 
     }
@@ -550,40 +651,368 @@ class LineBatch extends Batch
         let angle = 0;
         for (let i = 0; i < segments; i++)
         {
-            this.Vertex2f(x + Math.sin(DEG2RAD*angle)*width, y + Math.cos(DEG2RAD*angle)*height);
-            this.Vertex2f(x + Math.sin(DEG2RAD*(angle + stepLength))*width, y + Math.cos(DEG2RAD*(angle + stepLength))*height);
+           this.Line(x + Math.sin(DEG2RAD*angle)*width, y + Math.cos(DEG2RAD*angle)*height,
+                    x + Math.sin(DEG2RAD*(angle + stepLength))*width, y + Math.cos(DEG2RAD*(angle + stepLength))*height);
+            
             angle += stepLength;
         }       
     }
     RectangleFromTo(x, y,x2,y2)
     {
-
-        this.Vertex2f(x, y);
-        this.Vertex2f(x2, y);
-        this.Vertex2f(x2, y);
-        this.Vertex2f(x2, y2);
-        this.Vertex2f(x2, y2);
-        this.Vertex2f(x, y2);
-        this.Vertex2f(x, y2);
-        this.Vertex2f(x, y);
+        this.Line(x, y, x2, y);
+        this.Line(x2, y, x2, y2);
+        this.Line(x2, y2, x, y2);
+        this.Line(x, y2, x, y);
     }
     Rectangle(x, y,width,height)
     {
- 
-        this.Vertex2f(x, y);
-        this.Vertex2f(x + width, y);
-        this.Vertex2f(x + width, y);
-        this.Vertex2f(x + width, y + height);
-        this.Vertex2f(x + width, y + height);
-        this.Vertex2f(x, y + height);
-        this.Vertex2f(x, y + height);
-        this.Vertex2f(x, y);
+
+        let x0 = x;
+        let y0 = y;
+        let x1 = x + width;
+        let y1 = y + height; 
+
+        this.Line(x0, y0, x1, y0);
+        this.Line(x1, y0, x1, y1);
+        this.Line(x1, y1, x0, y1);
+        this.Line(x0, y1, x0, y0);
+
     }
+    Line(x0, y0, x1, y1)
+    {
+       
+
+            if (this.useClip)
+            {
+                
+                let xmin = this.clip.x;	
+                let xmax = this.clip.x + this.clip.width;
+                let ymin = this.clip.y;
+                let ymax = this.clip.y + this.clip.height;
+
+                let t0 = 0;
+                let t1 = 1;
+
+                let dx = x1 - x0;
+                let dy = y1 - y0;
+
+                let accept = true;
+
+                if (dx !== 0) 
+                {
+                    let tMin = (xmin - x0) / dx;
+                    let tMax = (xmax - x0) / dx;
+
+                    if (tMin > tMax) 
+                    {
+                        let temp = tMin;
+                        tMin = tMax;
+                        tMax = temp;
+                    }
+
+                    if (tMin > t0) t0 = tMin;
+                    if (tMax < t1) t1 = tMax;
+
+                    if (t0 > t1) accept = false;
+                } else if (x0 < xmin || x0 > xmax)
+                 {
+                    accept = false;
+                }
+
+                if (accept && dy !== 0) 
+                {
+                    let tMin = (ymin - y0) / dy;
+                    let tMax = (ymax - y0) / dy;
+
+                    if (tMin > tMax) 
+                    {
+                        let temp = tMin;
+                        tMin = tMax;
+                        tMax = temp;
+                    }
+
+                    if (tMin > t0) t0 = tMin;
+                    if (tMax < t1) t1 = tMax;
+
+                    if (t0 > t1) accept = false;
+                } else if (y0 < ymin || y0 > ymax) 
+                {
+                    accept = false;
+                }
+
+                if (accept) 
+                {
+                    let x0Clip = x0 + t0 * dx;
+                    let y0Clip = y0 + t0 * dy;
+                    let x1Clip = x0 + t1 * dx;
+                    let y1Clip = y0 + t1 * dy;
+
+                    this.Vertex2f(x0Clip, y0Clip);
+                    this.Vertex2f(x1Clip, y1Clip);
+                }
+
+         
+        } else 
+        {
+            this.Vertex2f(x0, y0);
+            this.Vertex2f(x1, y1);
+        }           
+
+       
+    }
+
    
+    CircleSector(x, y, radius, startAngle, endAngle,  segments)
+    {
+        if (radius <= 0.0) radius = 0.1;
+        if (endAngle < startAngle)
+        {
+            let tmp = startAngle;
+            startAngle = endAngle;
+            endAngle = tmp;
+        }
+
+        let minSegments = Math.ceil((endAngle - startAngle)/90);
+
+        if (segments < minSegments)
+        {
+            let th = Math.acos(2*Math.pow(1 - 0.5/radius, 2) - 1);
+            segments = Math.ceil(2*Math.PI/th);
+            if (segments <= 0) segments = minSegments;
+        }
+
+        let stepLength = (endAngle - startAngle)/segments;
+        let angle = startAngle;
+       
+
+  
+        
+        if (this.showCapLines)
+        {
+        this.Line(x, y, x + Math.sin(DEG2RAD*angle)*radius, y + Math.cos(DEG2RAD*angle)*radius);
+        }
+
+        for (let i = 0; i < segments; i++)
+        {
+            this.Line(x + Math.sin(DEG2RAD*angle)*radius, y + Math.cos(DEG2RAD*angle)*radius, x + Math.sin(DEG2RAD*(angle + stepLength))*radius, y + Math.cos(DEG2RAD*(angle + stepLength))*radius);
+            angle += stepLength;
+        }
+        if(this.showCapLines)
+        {
+           this.Line(x, y, x + Math.sin(DEG2RAD*angle)*radius, y + Math.cos(DEG2RAD*angle)*radius);
+        }
+    
+    }
+
+    Circle(x, y, radius)
+    {
+        this.CircleSector(x, y, radius, 0, 360, 18);
+
+    }
+    Ring(x, y, innerRadius, outerRadius, startAngle, endAngle,  segments)
+    {
+        if (startAngle == endAngle) return;
+
+        if (outerRadius < innerRadius)
+        {
+            let tmp = outerRadius;
+            outerRadius = innerRadius;
+            innerRadius = tmp;
+
+            if (outerRadius <= 0.0) outerRadius = 0.1;
+        }
+
+        if (endAngle < startAngle)
+        {
+            let tmp = startAngle;
+            startAngle = endAngle;
+            endAngle = tmp;
+        }
+
+        let minSegments = Math.ceil((endAngle - startAngle)/90);
+
+        if (segments < minSegments)
+        {
+            let th = Math.acos(2*Math.pow(1 - 0.5/outerRadius, 2) - 1);
+            segments = Math.ceil(2*Math.PI/th);
+            if (segments <= 0) segments = minSegments;
+        }
+
+        if (innerRadius <= 0.0)
+        {
+            this.CircleSector(x, y, outerRadius, startAngle, endAngle, segments);
+            return;
+        }
+
+        let stepLength = (endAngle - startAngle)/segments;
+        let angle = startAngle;
+
+
+     
+        if (this.showCapLines)
+        {
+      
+            this.Line(x + Math.sin(DEG2RAD*angle)*outerRadius, y + Math.cos(DEG2RAD*angle)*outerRadius, x + Math.sin(DEG2RAD*angle)*innerRadius, y + Math.cos(DEG2RAD*angle)*innerRadius);
+        }
+
+        for (let i = 0; i < segments; i++)
+        {
+        
+            this.Line(x + Math.sin(DEG2RAD*angle)*outerRadius, y + Math.cos(DEG2RAD*angle)*outerRadius, 
+                      x + Math.sin(DEG2RAD*(angle + stepLength))*outerRadius, y + Math.cos(DEG2RAD*(angle + stepLength))*outerRadius);
+
+        
+            this.Line(x + Math.sin(DEG2RAD*angle)*innerRadius, y + Math.cos(DEG2RAD*angle)*innerRadius,
+                      x + Math.sin(DEG2RAD*(angle + stepLength))*innerRadius, y + Math.cos(DEG2RAD*(angle + stepLength))*innerRadius);
+
+            angle += stepLength;
+        }
+
+        if (this.showCapLines)
+        {
+
+            this.Line(x + Math.sin(DEG2RAD*angle)*outerRadius, y + Math.cos(DEG2RAD*angle)*outerRadius, 
+                      x + Math.sin(DEG2RAD*angle)*innerRadius, y + Math.cos(DEG2RAD*angle)*innerRadius);
+
+        }
+
+    }
+
+
+    Ellipse(x, y, width, height)
+    {
+
+        let segments = 36;
+        let stepLength = 360/segments;
+        let angle = 0;
+        for (let i = 0; i < segments; i++)
+        {
+           this.Line(x + Math.sin(DEG2RAD*angle)*width, y + Math.cos(DEG2RAD*angle)*height,
+                    x + Math.sin(DEG2RAD*(angle + stepLength))*width, y + Math.cos(DEG2RAD*(angle + stepLength))*height);
+            
+            angle += stepLength;
+        }       
+    }
+    RectangleFromTo(x, y,x2,y2)
+    {
+        this.Line(x, y, x2, y);
+        this.Line(x2, y, x2, y2);
+        this.Line(x2, y2, x, y2);
+        this.Line(x, y2, x, y);
+    }
+    Rectangle(x, y,width,height)
+    {
+
+        let x0 = x;
+        let y0 = y;
+        let x1 = x + width;
+        let y1 = y + height; 
+
+        this.Line(x0, y0, x1, y0);
+        this.Line(x1, y0, x1, y1);
+        this.Line(x1, y1, x0, y1);
+        this.Line(x0, y1, x0, y0);
+
+    }
+    Triangle(x0, y0, x1, y1, x2, y2) 
+    {
+        this.Line(x0, y0, x1, y1);
+        this.Line(x1, y1, x2, y2);
+        this.Line(x2, y2, x0, y0);
+    }
+
+    Polygon(points) 
+    {
+        const numPoints = points.length;
+        for (let i = 0; i < numPoints; i++) 
+        {
+            const x0 = points[i][0];
+            const y0 = points[i][1];
+            const x1 = points[(i + 1) % numPoints][0];
+            const y1 = points[(i + 1) % numPoints][1];
+            this.Line(x0, y0, x1, y1);
+        }
+    }
+    CircleArc(x, y, radius, startAngle, endAngle, segments) 
+    {
+        if (radius <= 0.0) radius = 0.1;
+    
+        let stepLength = (endAngle - startAngle) / segments;
+        let angle = startAngle;
+    
+        for (let i = 0; i < segments; i++) 
+        {
+            this.Line
+            (
+                x + Math.sin(DEG2RAD * angle) * radius,
+                y + Math.cos(DEG2RAD * angle) * radius,
+                x + Math.sin(DEG2RAD * (angle + stepLength)) * radius,
+                y + Math.cos(DEG2RAD * (angle + stepLength)) * radius
+            );
+            angle += stepLength;
+        }
+    }
+
+    Star(x, y, outerRadius, innerRadius, points) 
+    {
+        const stepAngle = (2 * Math.PI) / (2 * points);
+        let angle = -Math.PI / 2;
+    
+        for (let i = 0; i < points * 2; i++) 
+        {
+            const radius = i % 2 === 0 ? outerRadius : innerRadius;
+            const x0 = x + radius * Math.cos(angle);
+            const y0 = y + radius * Math.sin(angle);
+            angle += stepAngle;
+            const x1 = x + radius * Math.cos(angle);
+            const y1 = y + radius * Math.sin(angle);
+            this.Line(x0, y0, x1, y1);
+        }
+    }
+    Arrow(x0, y0, x1, y1, headSize) 
+    {
+        this.Line(x0, y0, x1, y1);
+        const angle = Math.atan2(y1 - y0, x1 - x0);
+        const x2 = x1 - headSize * Math.cos(angle - Math.PI / 6);
+        const y2 = y1 - headSize * Math.sin(angle - Math.PI / 6);
+        const x3 = x1 - headSize * Math.cos(angle + Math.PI / 6);
+        const y3 = y1 - headSize * Math.sin(angle + Math.PI / 6);
+        this.Line(x1, y1, x2, y2);
+        this.Line(x1, y1, x3, y3);
+    }
+    
+    QuadraticBezierCurve(x0, y0, x1, y1, x2, y2,steps=100) 
+    {
+        
+        for (let t = 0; t <= 1; t += 1 / steps) 
+        {
+            const x = (1 - t) * (1 - t) * x0 + 2 * (1 - t) * t * x1 + t * t * x2;
+            const y = (1 - t) * (1 - t) * y0 + 2 * (1 - t) * t * y1 + t * t * y2;
+            this.Vertex2f(x, y);
+        }
+    }
+    Grid(x, y, width, height, rows, columns) 
+    {
+        const deltaX = width / columns;
+        const deltaY = height / rows;
+        for (let i = 0; i <= rows; i++) 
+        {
+            this.Line(x, y + i * deltaY, x + width, y + i * deltaY);
+        }
+        for (let j = 0; j <= columns; j++) 
+        {
+            this.Line(x + j * deltaX, y, x + j * deltaX, y + height);
+        }
+    }
+       
+    
 
 }
 
 //********************************************************************************************************************************************/
+
+
+
 
 class FillBatch extends Batch
 {
@@ -598,8 +1027,8 @@ class FillBatch extends Batch
     {
      
         if (this.indexCount === 0) return;
-        Renderer.SetSolidRender();
-        Renderer.EnableBlend(true);
+        Core.SetSolidRender();
+        Core.EnableBlend(true);
       
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
         gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.vertices.subarray(0, this.indexCount));
@@ -610,13 +1039,80 @@ class FillBatch extends Batch
    
         gl.bindVertexArray(this.VAO);
  
-        Renderer.DrawArrays(TRIANGLES, 0, count);
+        Core.DrawArrays(TRIANGLES, 0, count);
 
         gl.bindVertexArray(null);
 
         super.Flush();
        
     }
+      
+    
+    
+    clipTriangle(x0, y0, x1, y1, x2, y2) 
+    {
+
+         let xmin = this.clip.x;	
+         let xmax = this.clip.x + this.clip.width;
+         let ymin = this.clip.y;
+         let ymax = this.clip.y + this.clip.height;
+
+        if (x0 < xmin && x1 < xmin && x2 < xmin) return;
+        if (x0 > xmax && x1 > xmax && x2 > xmax) return;
+        if (y0 < ymin && y1 < ymin && y2 < ymin) return;
+        if (y0 > ymax && y1 > ymax && y2 > ymax) return;
+
+        if (x0< xmin)        {             x0 = xmin;        }
+        if (x1 < xmin)        {            x1 = xmin;        }
+        if (x2 < xmin)        {            x2 = xmin;        }
+        if (x0 > xmax)        {            x0 = xmax;        }
+        if (x1 > xmax)        {            x1 = xmax;        }
+        if (x2 > xmax)        {            x2 = xmax;        }
+        if (y0 < ymin)        {            y0 = ymin;        }
+        if (y1 < ymin)        {            y1 = ymin;        }
+        if (y2 < ymin)        {            y2 = ymin;        }
+        if (y0 > ymax)        {            y0 = ymax;        }
+        if (y1 > ymax)        {            y1 = ymax;        }
+        if (y2 > ymax)        {            y2 = ymax;        }
+
+           
+        this.DrawTriangle(x0, y0, x1, y1, x2, y2);
+        
+    }
+
+    DrawTriangle (x0, y0, x1, y1, x2, y2)
+    {
+        this.Vertex2f(x0, y0);
+        this.Vertex2f(x1, y1);
+        this.Vertex2f(x2, y2);
+       
+    }
+    
+    
+    Triangle(x0, y0, x1, y1, x2, y2) 
+    {
+
+        this.clipTriangle(x0, y0, x1, y1, x2, y2);
+       
+       
+    }
+  
+
+    Rectangle(x, y,width,height)
+    {
+
+
+
+        let x0 = x;
+        let y0 = y;
+        let x1 = x + width;
+        let y1 = y + height;
+        this.clipTriangle(x0, y0, x1, y0, x1, y1);
+        this.clipTriangle(x1, y1, x0,  y1, x0, y0);
+
+    }
+    
+    
     
 
     RotateRectangle(x, y, w, h, pivot_x, pivot_y,rotation)
@@ -642,17 +1138,14 @@ class FillBatch extends Batch
 
 
 
-        
-        this.Vertex2f(topLeftX, topLeftY);
-        this.Vertex2f(topRightX, topRightY);
-        this.Vertex2f(bottomRightX, bottomRightY);
 
-        this.Vertex2f(bottomRightX, bottomRightY);
-        this.Vertex2f(bottomLeftX, bottomLeftY);
-        this.Vertex2f(topLeftX, topLeftY);
 
+
+        this.Triangle(topLeftX, topLeftY, topRightX, topRightY, bottomRightX, bottomRightY);
+        this.Triangle(bottomRightX, bottomRightY, bottomLeftX, bottomLeftY, topLeftX, topLeftY);
         
     }
+
     CircleSector(x, y, radius, startAngle, endAngle,  segments)
     {
             
@@ -680,9 +1173,18 @@ class FillBatch extends Batch
     
             for (let i = 0; i < segments; i++)
             {
-                this.Vertex2f(x, y);
-                this.Vertex2f(x + Math.sin(DEG2RAD*angle)*radius, y + Math.cos(DEG2RAD*angle)*radius);
-                this.Vertex2f(x + Math.sin(DEG2RAD*(angle + stepLength))*radius, y + Math.cos(DEG2RAD*(angle + stepLength))*radius);
+             
+                let x0 =x;
+                let y0 =y;
+
+                let x1 =x + Math.sin(DEG2RAD*angle)*radius;
+                let y1 =y + Math.cos(DEG2RAD*angle)*radius;
+
+                let x2 =x + Math.sin(DEG2RAD*(angle + stepLength))*radius;
+                let y2 =y + Math.cos(DEG2RAD*(angle + stepLength))*radius;
+
+                this.Triangle(x0, y0, x1, y1, x2, y2);
+
                     
                 angle += stepLength;
             }
@@ -735,13 +1237,28 @@ class FillBatch extends Batch
 
         for (let i = 0; i < segments; i++)
         {
-            this.Vertex2f(x + Math.sin(DEG2RAD*angle)*outerRadius, y + Math.cos(DEG2RAD*angle)*outerRadius);
-            this.Vertex2f(x + Math.sin(DEG2RAD*(angle + stepLength))*outerRadius, y + Math.cos(DEG2RAD*(angle + stepLength))*outerRadius);
-            this.Vertex2f(x + Math.sin(DEG2RAD*angle)*innerRadius, y + Math.cos(DEG2RAD*angle)*innerRadius);
+            let x0 =x + Math.sin(DEG2RAD*angle)*outerRadius;
+            let y0 =y + Math.cos(DEG2RAD*angle)*outerRadius;
 
-            this.Vertex2f(x + Math.sin(DEG2RAD*(angle + stepLength))*outerRadius, y + Math.cos(DEG2RAD*(angle + stepLength))*outerRadius);
-            this.Vertex2f(x + Math.sin(DEG2RAD*(angle + stepLength))*innerRadius, y + Math.cos(DEG2RAD*(angle + stepLength))*innerRadius);
-            this.Vertex2f(x + Math.sin(DEG2RAD*angle)*innerRadius, y + Math.cos(DEG2RAD*angle)*innerRadius);
+            let x1 =x + Math.sin(DEG2RAD*(angle + stepLength))*outerRadius;
+            let y1 =y + Math.cos(DEG2RAD*(angle + stepLength))*outerRadius;
+
+            let x2 =x + Math.sin(DEG2RAD*angle)*innerRadius;
+            let y2 =y + Math.cos(DEG2RAD*angle)*innerRadius;
+
+            this.Triangle(x0, y0, x1, y1, x2, y2);
+
+
+            x0 =x + Math.sin(DEG2RAD*(angle + stepLength))*outerRadius;
+            y0 =y + Math.cos(DEG2RAD*(angle + stepLength))*outerRadius;
+
+            x1 =x + Math.sin(DEG2RAD*(angle + stepLength))*innerRadius;
+            y1 =y + Math.cos(DEG2RAD*(angle + stepLength))*innerRadius;
+
+            x2 =x + Math.sin(DEG2RAD*angle)*innerRadius;
+            y2 =y + Math.cos(DEG2RAD*angle)*innerRadius;
+
+            this.Triangle(x0, y0, x1, y1, x2, y2);
 
             angle += stepLength;
         }
@@ -751,26 +1268,43 @@ class FillBatch extends Batch
     }
 
 
-    Rectangle(x, y,width,height)
-    {
-      
-        this.Vertex2f(x, y);
-        this.Vertex2f(x + width, y);
-        this.Vertex2f(x + width, y + height);
-        this.Vertex2f(x + width, y + height);
-        this.Vertex2f(x, y + height);
-        this.Vertex2f(x, y);
-    }
+
     RectangleFromTo(x, y,x2,y2)
     {
 
-        this.Vertex2f(x, y);
-        this.Vertex2f(x2, y);
-        this.Vertex2f(x2, y2);
-        this.Vertex2f(x2, y2);
-        this.Vertex2f(x, y2);
-        this.Vertex2f(x, y);
+        this.Triangle(
+            x, y, 
+            x2, y, 
+            x2, y2);
+
+        this.Triangle(
+            x2, y2,
+            x, y2,
+            x, y);
     }
+    Star(x, y, outerRadius, innerRadius)
+     {
+        let angleStep = 72;
+        for (let i = 0; i < 5; i++)
+         {
+            let x0 = x + outerRadius * Math.cos(i * angleStep * DEG2RAD);
+            let y0 = y + outerRadius * Math.sin(i * angleStep * DEG2RAD);
+            let x1 = x + innerRadius * Math.cos((i + 0.5) * angleStep * DEG2RAD);
+            let y1 = y + innerRadius * Math.sin((i + 0.5) * angleStep * DEG2RAD);
+            let x2 = x + outerRadius * Math.cos((i + 1) * angleStep * DEG2RAD);
+            let y2 = y + outerRadius * Math.sin((i + 1) * angleStep * DEG2RAD);
+    
+            this.clipTriangle(x0, y0, x1, y1, x2, y2);
+        }
+    }
+
+    Cross(x, y, armLength) 
+    {
+        this.clipTriangle(x, y, x + armLength, y, x, y + armLength);
+        this.clipTriangle(x, y, x, y + armLength, x - armLength, y);
+    }
+    
+    
 
 }
 //********************************************************************************************************************************************/
@@ -791,9 +1325,9 @@ class PolyBatch extends Batch
      
         if (this.indexCount === 0) return;
         if (this.mode === -1) return;
-        Renderer.SetSolidRender();
+        Core.SetSolidRender();
 
-        Renderer.EnableBlend(true);
+        Core.EnableBlend(true);
 
        
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
@@ -809,7 +1343,7 @@ class PolyBatch extends Batch
    
         gl.bindVertexArray(this.VAO);
  
-        Renderer.DrawArrays(this.mode, 0, count);
+        Core.DrawArrays(this.mode, 0, count);
 
         gl.bindVertexArray(null);
 
@@ -1214,6 +1748,19 @@ const Allign =
     
 };
 //********************************************************************************************************************************************/
+
+
+class Quad 
+{
+    constructor()
+    {
+        this.x = 0;
+        this.y = 0;
+        this.tx = 0;
+        this.ty = 0;
+    }
+}
+
 class SpriteBatch 
 {
     static  FIX_ARTIFACTS_BY_STRECHING_TEXEL = true;
@@ -1227,7 +1774,14 @@ class SpriteBatch
         this.maxElemnts = capacity * 4 * 6;
 
         this.quad = new Float32Array(8);
+        this.quads=[];
+        this.quads.push(new Quad());
+        this.quads.push(new Quad());
+        this.quads.push(new Quad());
+        this.quads.push(new Quad());
     
+        this.clip = new Rectangle(0, 0, Core.GetWidth(), Core.GetHeight());
+        this.useClip = false;
 
 
         this.totalAlloc = Math.floor( ( this.maxVertex * 4 * this.vertexStrideSize * 4) / 9);
@@ -1251,7 +1805,7 @@ class SpriteBatch
         this.flip_x = false;
         this.flip_y = false;
         
-        this.defaultTexture  = Renderer.defaultTexture;
+        this.defaultTexture  = Core.defaultTexture;
         let k=0;
         for (let i = 0; i < this.maxElemnts ; i+=6)
         {
@@ -1353,9 +1907,9 @@ class SpriteBatch
        if (this.vertexCount === 0) return;
 
      
-        Renderer.EnableBlend(true);
-        Renderer.SetBlendMode(BlendMode.Normal);
-        Renderer.SetTextureShader();
+        Core.EnableBlend(true);
+        Core.SetBlendMode(BlendMode.Normal);
+        Core.SetTextureShader();
  
        
        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
@@ -1370,7 +1924,7 @@ class SpriteBatch
 
         gl.bindVertexArray(this.VAO);
         this.currentBaseTexture.Use();
-        Renderer.DrawElements(gl.TRIANGLES, (this.vertexCount / 4) * 6, 0);
+        Core.DrawElements(gl.TRIANGLES, (this.vertexCount / 4) * 6, 0);
   
         gl.bindVertexArray(null);
 
@@ -1399,6 +1953,31 @@ class SpriteBatch
         this.vertexCount = 0;
  
       
+    }
+    PointInView(x, y)
+    {
+        if (this.useClip)
+        {
+            return this.clip.contains(x, y);
+        }
+        return true;
+    }
+    SetClip(x, y, width, height)
+    {
+        this.clip.set(x, y, width, height);
+        this.useClip = true;
+    }
+    GetClip()
+    {
+        return this.clip;
+    }
+    DisableClip()
+    {
+        this.useClip = false;
+    }
+    EnableClip()
+    {
+        this.useClip = true;
     }
     SetFlip(flipX, flipY)
     {
@@ -1917,24 +2496,97 @@ class SpriteBatch
             top = bottom;
             bottom = tmp;
         }
-       
+   
+
+        let x1 =x;                let y1 =y;
+        let x2 =x;                let y2 =y + height;
+        let x3 =x + width;        let y3 =y + height;
+        let x4 =x + width;        let y4 =y;
+        
+        let minx_x=Min( Min(x1, x2), Min(x3, x4));
+        let minx_y=Min( Min(y1, y2), Min(y3, y4));
+        let maxx_x=Max( Max(x1, x2), Max(x3, x4));
+        let maxx_y=Max( Max(y1, y2), Max(y3, y4));
+
+        let WIDTH  = maxx_x - minx_x;
+        let HEIGHT = maxx_y - minx_y;
+
+
 
       
 
-        let fx2 = x + width;
-        let fy2 = y + height;
+        this.quads[0].x = x1;  this.quads[0].y = y1; 
+        this.quads[1].x = x2;  this.quads[1].y = y2;
+        this.quads[2].x = x3;  this.quads[2].y = y3;
+        this.quads[3].x = x4;  this.quads[3].y = y4;
 
-        this.TextCoords(left, top);
-        this.Vertex2(x, y);
+        this.quads[0].tx = left;  this.quads[0].ty = top;
+        this.quads[1].tx = left;  this.quads[1].ty = bottom;
+        this.quads[2].tx = right; this.quads[2].ty = bottom;
+        this.quads[3].tx = right; this.quads[3].ty = top;
 
-        this.TextCoords(left, bottom);
-        this.Vertex2(x, fy2);
+        let quadLeft = Min(Min(this.quads[0].x, this.quads[1].x), Min(this.quads[2].x, this.quads[3].x));
+        let quadTop = Min(Min(this.quads[0].y, this.quads[1].y), Min(this.quads[2].y, this.quads[3].y));
+        let quadRight = Max(Max(this.quads[0].x, this.quads[1].x), Max(this.quads[2].x, this.quads[3].x));
+        let quadBottom = Max(Max(this.quads[0].y, this.quads[1].y), Max(this.quads[2].y, this.quads[3].y));
 
-        this.TextCoords(right, bottom);
-        this.Vertex2(fx2, fy2);
+        if (this.useClip)
+        {
+            if (quadRight < this.clip.x || quadLeft > this.clip.x + this.clip.width || quadBottom < this.clip.y || quadTop > this.clip.y + this.clip.height)
+            {
+                return;
+            }
 
-        this.TextCoords(right, top);
-        this.Vertex2(fx2, y);
+            if (x1 < this.clip.x)
+            {
+                let delta = this.clip.x - x1;
+                let ratio = delta / WIDTH;
+                this.quads[0].x = this.quads[1].x = this.clip.x;
+                this.quads[0].tx = this.quads[1].tx = left + (right - left) * ratio;
+
+            } 
+
+            if (x1 + WIDTH > this.clip.x + this.clip.width)
+            {
+                let delta = (x1 + WIDTH) - (this.clip.x + this.clip.width);
+                let ratio = delta / WIDTH;
+                this.quads[2].x = this.quads[3].x = this.clip.x + this.clip.width;
+                this.quads[2].tx = this.quads[3].tx = right - (right - left) * ratio;
+            }
+
+            if (y1 < this.clip.y)
+            {
+                let delta = this.clip.y - y1;
+                let ratio = delta / HEIGHT;
+                this.quads[0].y = this.quads[3].y = this.clip.y;
+                this.quads[0].ty = this.quads[3].ty = top + (bottom - top) * ratio;
+            }
+
+            if (y1 + HEIGHT > this.clip.y + this.clip.height)
+            {
+                let delta = (y1 + HEIGHT) - (this.clip.y + this.clip.height);
+                let ratio = delta / HEIGHT;
+                this.quads[1].y = this.quads[2].y = this.clip.y + this.clip.height;
+                this.quads[1].ty = this.quads[2].ty = bottom - (bottom - top) * ratio;
+            }
+
+        }
+        
+
+
+        
+        this.TextCoords(this.quads[1].tx, this.quads[1].ty);
+        this.Vertex2(this.quads[1].x, this.quads[1].y);
+
+        this.TextCoords(this.quads[0].tx, this.quads[0].ty);
+        this.Vertex2(this.quads[0].x, this.quads[0].y);
+
+        this.TextCoords(this.quads[3].tx, this.quads[3].ty);
+        this.Vertex2(this.quads[3].x, this.quads[3].y);
+
+        this.TextCoords(this.quads[2].tx, this.quads[2].ty);
+        this.Vertex2(this.quads[2].x, this.quads[2].y);
+
 
     }
 
@@ -2253,20 +2905,110 @@ class SpriteBatch
             bottom = tmp;
         }
        
+        
+        let x1 =x;                let y1 =y;
+        let x2 =x;                let y2 =y + height;
+        let x3 =x + width;        let y3 =y + height;
+        let x4 =x + width;        let y4 =y;
+        
+        let minx_x=Min( Min(x1, x2), Min(x3, x4));
+        let minx_y=Min( Min(y1, y2), Min(y3, y4));
+        let maxx_x=Max( Max(x1, x2), Max(x3, x4));
+        let maxx_y=Max( Max(y1, y2), Max(y3, y4));
+
+        let WIDTH  = maxx_x - minx_x;
+        let HEIGHT = maxx_y - minx_y;
 
 
 
-        this.TextCoords(left, top);
-        this.Vertex2(x, y);
+      
 
-        this.TextCoords(left, bottom);
-        this.Vertex2(x, y + height);
+        this.quads[0].x = x1;  this.quads[0].y = y1; 
+        this.quads[1].x = x2;  this.quads[1].y = y2;
+        this.quads[2].x = x3;  this.quads[2].y = y3;
+        this.quads[3].x = x4;  this.quads[3].y = y4;
 
-        this.TextCoords(right, bottom);
-        this.Vertex2(x + width, y + height);
+        this.quads[0].tx = left;  this.quads[0].ty = top;
+        this.quads[1].tx = left;  this.quads[1].ty = bottom;
+        this.quads[2].tx = right; this.quads[2].ty = bottom;
+        this.quads[3].tx = right; this.quads[3].ty = top;
 
-        this.TextCoords(right, top);
-        this.Vertex2(x + width, y);
+        let quadLeft = Min(Min(this.quads[0].x, this.quads[1].x), Min(this.quads[2].x, this.quads[3].x));
+        let quadTop = Min(Min(this.quads[0].y, this.quads[1].y), Min(this.quads[2].y, this.quads[3].y));
+        let quadRight = Max(Max(this.quads[0].x, this.quads[1].x), Max(this.quads[2].x, this.quads[3].x));
+        let quadBottom = Max(Max(this.quads[0].y, this.quads[1].y), Max(this.quads[2].y, this.quads[3].y));
+
+        if (this.useClip)
+        {
+            if (quadRight < this.clip.x || quadLeft > this.clip.x + this.clip.width || quadBottom < this.clip.y || quadTop > this.clip.y + this.clip.height)
+            {
+                return;
+            }
+
+            if (x1 < this.clip.x)
+            {
+                let delta = this.clip.x - x1;
+                let ratio = delta / WIDTH;
+                this.quads[0].x = this.quads[1].x = this.clip.x;
+                this.quads[0].tx = this.quads[1].tx = left + (right - left) * ratio;
+
+            } 
+
+            if (x1 + WIDTH > this.clip.x + this.clip.width)
+            {
+                let delta = (x1 + WIDTH) - (this.clip.x + this.clip.width);
+                let ratio = delta / WIDTH;
+                this.quads[2].x = this.quads[3].x = this.clip.x + this.clip.width;
+                this.quads[2].tx = this.quads[3].tx = right - (right - left) * ratio;
+            }
+
+            if (y1 < this.clip.y)
+            {
+                let delta = this.clip.y - y1;
+                let ratio = delta / HEIGHT;
+                this.quads[0].y = this.quads[3].y = this.clip.y;
+                this.quads[0].ty = this.quads[3].ty = top + (bottom - top) * ratio;
+            }
+
+            if (y1 + HEIGHT > this.clip.y + this.clip.height)
+            {
+                let delta = (y1 + HEIGHT) - (this.clip.y + this.clip.height);
+                let ratio = delta / HEIGHT;
+                this.quads[1].y = this.quads[2].y = this.clip.y + this.clip.height;
+                this.quads[1].ty = this.quads[2].ty = bottom - (bottom - top) * ratio;
+            }
+
+        }
+        
+
+
+        
+        this.TextCoords(this.quads[1].tx, this.quads[1].ty);
+        this.Vertex2(this.quads[1].x, this.quads[1].y);
+
+        this.TextCoords(this.quads[0].tx, this.quads[0].ty);
+        this.Vertex2(this.quads[0].x, this.quads[0].y);
+
+        this.TextCoords(this.quads[3].tx, this.quads[3].ty);
+        this.Vertex2(this.quads[3].x, this.quads[3].y);
+
+        this.TextCoords(this.quads[2].tx, this.quads[2].ty);
+        this.Vertex2(this.quads[2].x, this.quads[2].y);
+
+
+
+
+        // this.TextCoords(left, top);
+        // this.Vertex2(x, y);
+
+        // this.TextCoords(left, bottom);
+        // this.Vertex2(x, y + height);
+
+        // this.TextCoords(right, bottom);
+        // this.Vertex2(x + width, y + height);
+
+        // this.TextCoords(right, top);
+        // this.Vertex2(x + width, y);
 
 
     }
@@ -2332,6 +3074,8 @@ class SpriteBatch
             top = bottom;
             bottom = tmp;
         }
+
+
 
 
 
@@ -2624,9 +3368,9 @@ class PolySprite
         };
 
    
-        Renderer.EnableBlend(true);
-        Renderer.SetBlendMode(BlendMode.Normal);
-        Renderer.SetTextureShader();
+        Core.EnableBlend(true);
+        Core.SetBlendMode(BlendMode.Normal);
+        Core.SetTextureShader();
      
         this.texture.Use();
      
@@ -3166,9 +3910,9 @@ class SpriteCloud
         };
 
    
-        Renderer.EnableBlend(true);
-        Renderer.SetBlendMode(BlendMode.Normal);
-        Renderer.SetTextureShader();
+        Core.EnableBlend(true);
+        Core.SetBlendMode(BlendMode.Normal);
+        Core.SetTextureShader();
      
         this.texture.Use();
      
@@ -3176,7 +3920,7 @@ class SpriteCloud
 
         gl.bindVertexArray(this.vertexArray);
        
-        Renderer.DrawElements(gl.TRIANGLES, (this.vertexCount / 4) * 6,  0);
+        Core.DrawElements(gl.TRIANGLES, (this.vertexCount / 4) * 6,  0);
 
      //   console.log("DrawElements " + (this.vertexCount / 4));
 
@@ -3394,7 +4138,7 @@ class TileLayer
         this.tileHeight = tileHeight;
         this.width = width;
         this.height = height;
-        this.texture =  Renderer.defaultTexture;
+        this.texture =  Core.defaultTexture;
        
    
 

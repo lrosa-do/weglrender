@@ -13,11 +13,11 @@ class Texture
     Use()
     {
       //  gl.bindTexture(gl.TEXTURE_2D, this.id);
-      Renderer.SetTexture(this.id);
+      Core.SetTexture(this.id);
     }
     Unbind()
     {
-        Renderer.SetTexture(null);
+        Core.SetTexture(null);
        // gl.bindTexture(gl.TEXTURE_2D, null);
     }
     Release()
@@ -168,13 +168,13 @@ class RenderTexture extends Texture
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.id, 0);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-        Renderer.TraceGl();
+        Core.TraceGl();
     }
     Begin()
     {
-        this.saveViewport= Renderer.GetViewPort();
+        this.saveViewport= Core.GetViewPort();
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.frameBuffer);
-        Renderer.SetViewPort(0, 0, this.width, this.height);
+        Core.SetViewPort(0, 0, this.width, this.height);
         gl.clearColor(0, 0, 0, 1);   
         gl.clear(gl.COLOR_BUFFER_BIT| gl.DEPTH_BUFFER_BIT);
 
@@ -183,7 +183,7 @@ class RenderTexture extends Texture
     {
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.bindTexture(gl.TEXTURE_2D, this.id);
-        Renderer.SetViewPort(this.saveViewport.x, this.saveViewport.y, this.saveViewport.width, this.saveViewport.height);
+        Core.SetViewPort(this.saveViewport.x, this.saveViewport.y, this.saveViewport.width, this.saveViewport.height);
     }
     Release()
     {

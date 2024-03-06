@@ -21,13 +21,13 @@ canvas.height = pixelRatio * window.innerHeight;
 var width = canvas.width;
 var height = canvas.height;
     
-Renderer.Init(width, height);
-Renderer.SetClearColor(0.1, 0.1, 0.1);
-Renderer.SetViewPort(0, 0, width, height);
+Core.Init(width, height);
+Core.SetClearColor(0.1, 0.1, 0.1);
+Core.SetViewPort(0, 0, width, height);
 
-Renderer.SetOrthoProjection(0, width, height, 0, -10, 10);
+Core.SetOrthoProjection(0, width, height, 0, -10, 10);
 let camera = Mat4.GetMatrix2D(width/2,height/2,1,1,0,width/2,height/2);
-Renderer.SetViewMatrix(camera);
+Core.SetViewMatrix(camera);
 
 
 Assets.Init();
@@ -55,8 +55,8 @@ function render()
     font.SetSize(22);
     font.SetAllignment("left");
 
-    font.Print(fontRender,20, 40, "textures: "+Renderer.numTextures + " Draws " + Renderer.numDrawCalls );
-    font.Print(fontRender,20, 60, "Programs: "+Renderer.numPrograms + " Vertices: " + Renderer.numVertex + " Triangles: " + Renderer.numTriangles);
+    font.Print(fontRender,20, 40, "textures: "+Core.numTextures + " Draws " + Core.numDrawCalls );
+    font.Print(fontRender,20, 60, "Programs: "+Core.numPrograms + " Vertices: " + Core.numVertex + " Triangles: " + Core.numTriangles);
    
     fontRender.Render();
 
@@ -72,7 +72,7 @@ function update(dt)
 
 window.requestAnimationFrame(function loop()
 {
-    Renderer.ResetStats();
+    Core.ResetStats();
 
     stats.begin();
 

@@ -10,8 +10,21 @@ if (!gl)
 {
     console.log("O WebGL não está disponível, seu navegador pode não suportar.");
 }
+// var campoTexto = document.getElementById("campoTexto");
+
+// campoTexto.addEventListener("keydown", function(event) {
+
+//     Input.KeyDown(event);
+// });
+
+// campoTexto.addEventListener("keyup", function(event) {
+  
+//     Input.KeyUp(event);
+// });
+
 var stats=new Stats();
 document.body.appendChild(stats.dom);
+
 
 let CurrentTime, ElapsedTime, PreviousTime = Date.now(), LagTime = 0;
 let FPS = 60;          // Frames per second
@@ -37,12 +50,12 @@ var height = canvas.height;
 console.log("main");
 
 
-Renderer.Init(width, height);
-Renderer.SetClearColor(0.1, 0.1, 0.1);
-Renderer.SetViewPort(0, 0, width, height);
-Renderer.SetOrthoProjection(0, width, height, 0, -10, 10);
+Core.Init(width, height);
+Core.SetClearColor(0.1, 0.1, 0.1);
+Core.SetViewPort(0, 0, width, height);
+Core.SetOrthoProjection(0, width, height, 0, -10, 10);
 let camera = Mat4.GetMatrix2D(width/2,height/2,1,1,0,width/2,height/2);
-Renderer.SetViewMatrix(camera);
+Core.SetViewMatrix(camera);
 
 
 Assets.Init();
@@ -88,7 +101,7 @@ Assets.OnComplete = function()
 
 Assets.OnProgress = function(filename, progress, total)
 {
-    Renderer.Clear();
+    Core.Clear();
     
 
     
@@ -185,7 +198,7 @@ Assets.OnProgress = function(filename, progress, total)
     function Render()
     {
       
-         Renderer.Clear();
+         Core.Clear();
       
        
 
@@ -266,9 +279,9 @@ Assets.OnProgress = function(filename, progress, total)
         font.SetColor(LIME);
         font.SetSize(22);
         font.SetAllignment("left");
-        font.Print(fontRender,20, 120, "FPS: "+Int(CurrentFPS ));
-        font.Print(fontRender,20, 140, "textures: "+Int(Renderer.numTextures) + " Draws " + Int(Renderer.numDrawCalls));
-        font.Print(fontRender,20, 160, "Programs: "+Int(Renderer.numPrograms) + " Vertices: " + Int(Renderer.numVertex) + " Triangles: " + Int(Renderer.numTriangles));
+        font.Print(fontRender,20, 120, "FPS: "+Int(CurrentFPS ) );
+        font.Print(fontRender,20, 140, "textures: "+Int(Core.numTextures) + " Draws " + Int(Core.numDrawCalls));
+        font.Print(fontRender,20, 160, "Programs: "+Int(Core.numPrograms) + " Vertices: " + Int(Core.numVertex) + " Triangles: " + Int(Core.numTriangles));
        
 
    
@@ -291,15 +304,15 @@ Assets.OnProgress = function(filename, progress, total)
     {
     
 
-        Renderer.ResetStats();    
+        Core.ResetStats();    
         CurrentTime = Date.now();
         ElapsedTime = (CurrentTime - PreviousTime)/1000;
         PreviousTime = CurrentTime;
         LagTime += (ElapsedTime * 1000);
         FrameCounter++;
 
-        Renderer.elapsedTime = CurrentTime;
-        Renderer.deltaTime = ElapsedTime;
+        Core.elapsedTime = CurrentTime;
+        Core.deltaTime = ElapsedTime;
        
   
            
@@ -338,11 +351,11 @@ window.onresize = function()
     console.log("resize");
     let width  =  window.innerWidth;
     let height =  window.innerHeight;
-    //Renderer.SetViewPort(0, 0, width, height);
-   // Renderer.SetOrthoProjection(0, width, height, 0, -10, 10);
+    //Core.SetViewPort(0, 0, width, height);
+   // Core.SetOrthoProjection(0, width, height, 0, -10, 10);
 
   //  let camera = Mat4.GetMatrix2D(width/2,height/2,1,1,0,width/2,height/2);
-  //  Renderer.SetViewMatrix(camera);
+  //  Core.SetViewMatrix(camera);
 
 }
 
